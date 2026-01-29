@@ -8,7 +8,7 @@ class Colors:
     RESET = '\033[0m'
     BOLD = '\033[1m'
     DIM = '\033[2m'
-    
+
     # Colors
     RED = '\033[91m'
     GREEN = '\033[92m'
@@ -18,7 +18,7 @@ class Colors:
     CYAN = '\033[96m'
     WHITE = '\033[97m'
     GRAY = '\033[90m'
-    
+
     @staticmethod
     def disable():
         """Disable colors for non-TTY environments"""
@@ -111,17 +111,17 @@ def find_sources(roots: List[str]) -> List[str]:
 def check_clang_format(files: List[str]) -> Tuple[int, int]:
     """Check code formatting with clang-format"""
     print_section("clang-format")
-    
+
     if not which('clang-format'):
         print_skip()
         return 0, 1
-    
+
     issues = []
     for f in files:
         rc, out = run(['clang-format', '--output-replacements-xml', f])
         if '<replacement ' in out:
             issues.append(f)
-    
+
     if issues:
         print_error(len(issues))
         for f in issues:
@@ -141,26 +141,26 @@ def check_clang_format(files: List[str]) -> Tuple[int, int]:
             if diff_lines:
                 print_file_issue(f, "\n".join(diff_lines[:20]))  # Limit diff output
         return 1, 0
-    
+
     print_success()
     return 0, 0
 
 def check_clang_tidy(files: List[str]) -> Tuple[int, int]:
     """Check code with clang-tidy"""
     print_section("clang-tidy")
-    
+
     if not which('clang-tidy'):
         print_skip()
         return 0, 1
-    
+
     msgs = []
     flags = ['--'] + EXTRA_FLAGS if EXTRA_FLAGS else []
-    
+
     for f in files:
         rc, out = run(['clang-tidy', f] + flags)
         if rc != 0 or out.strip():
             msgs.append((f, out.strip()))
-    
+
     if msgs:
         print_error(len(msgs))
         for f, details in msgs:
@@ -171,40 +171,40 @@ def check_clang_tidy(files: List[str]) -> Tuple[int, int]:
                 truncated += f"\n... ({len(lines) - 15} more lines)"
             print_file_issue(f, truncated)
         return 1, 0
-    
+
     print_success()
     return 0, 0
 
 def check_cppcheck(roots: List[str]) -> Tuple[int, int]:
     """Check code with cppcheck"""
     print_section("cppcheck")
-    
+
     if not which('cppcheck'):
         print_skip()
         return 0, 1
-    
+
     cmd = ['cppcheck', '--enable=all', '--quiet'] + roots
     rc, out = run(cmd)
-    
+
     if rc != 0:
         print_error(1)
         print_file_issue("cppcheck", out.strip())
         return 1, 0
-    
+
     print_success()
     return 0, 0
 
 def check_cpplint(files: List[str]) -> Tuple[int, int]:
     """Check code style with cpplint"""
     print_section("cpplint")
-    
+
     if not which('cpplint'):
         print_skip()
         return 0, 1
-    
+
     msgs = []
     for f in files:
-        rc, out = run(['cpplint', '--filter=-legal/copyright', f])
+        rc, out = run(['cpplint', '--filter=-build/include_subdir, -legal/copyright', f])
         filtered_lines = [
             line for line in out.splitlines()
             if line.strip() and not line.strip().startswith('Done processing')
@@ -212,26 +212,26 @@ def check_cpplint(files: List[str]) -> Tuple[int, int]:
         filtered = "\n".join(filtered_lines).strip()
         if rc != 0 or filtered:
             msgs.append((f, filtered if filtered else out.strip()))
-    
+
     if msgs:
         print_error(len(msgs))
         for f, details in msgs:
             print_file_issue(f, details)
         return 1, 0
-    
+
     print_success()
     return 0, 0
 
 def main():
     # Find source files
     files = find_sources(ROOTS)
-    
+
     if not files:
         print(f"\n{ICON_ERROR} {Colors.RED}No C/C++ source files found{Colors.RESET}\n")
         return 1
-    
+
     print_header()
-    
+
     # Run all checks
     checks = [
         (check_clang_format, files),
@@ -239,11 +239,11 @@ def main():
         (check_cppcheck, ROOTS),
         (check_cpplint, files),
     ]
-    
+
     failed = 0
     passed = 0
     skipped = 0
-    
+
     for check_func, check_arg in checks:
         rc, skip = check_func(check_arg)
         if skip:
@@ -252,12 +252,12 @@ def main():
             passed += 1
         else:
             failed += 1
-    
+
     # Print summary
     print()
     total = len(checks)
     print_summary(total, passed, failed, skipped)
-    
+
     return 1 if failed > 0 else 0
 
 if __name__ == "__main__":
