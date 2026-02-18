@@ -1,10 +1,24 @@
 #!/bin/sh
+# ─────────────────────────────────────────────────────────
+#  post-checkout — Auto-pull and verify hooks on branch switch
+#  Opt-out:  GIT_AUTO_PULL=no
+#  Bypass:   SKIP_POST_CHECKOUT=1
+# ─────────────────────────────────────────────────────────
 . "$(dirname "$0")/log_hook.sh"
 
-# args: previous HEAD, new HEAD, is_branch_checkout (1 when branch was checked out)
+# args: previous HEAD, new HEAD, is_branch_checkout (1 = branch)
 prev_ref="$1"
 new_ref="$2"
 is_branch="$3"
+
+if [ "${SKIP_POST_CHECKOUT:-0}" = "1" ]; then
+	exit 0
+fi
+
+# Only act on branch checkouts (not file checkouts)
+if [ "$is_branch" != "1" ]; then
+	exit 0
+fi
 
 # Respect opt-out
 if [ "${GIT_AUTO_PULL:-yes}" = "no" ]; then
@@ -12,12 +26,6 @@ if [ "${GIT_AUTO_PULL:-yes}" = "no" ]; then
 	exit 0
 fi
 
-# only act on branch checkouts
-if [ "$is_branch" != "1" ]; then
-	exit 0
-fi
-
-# ensure we are at repo top
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT" || exit 0
 
@@ -26,18 +34,23 @@ if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
 	exit 0
 fi
 
-# check upstream
+# ── Auto-pull from upstream ───────────────────────────
 if git rev-parse --abbrev-ref --symbolic-full-name "@{u}" >/dev/null 2>&1; then
 	upstream="$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null)"
-	log_info "Auto-pull: attempting fast-forward pull from '$upstream' for branch '$branch'..."
+	log_info "Auto-pull: fast-forward from '$upstream' for '$branch'…"
 	if git pull --ff-only >/dev/null 2>&1; then
 		log_success "Auto-pull succeeded for '$branch'."
 	else
-		log_warn "Auto-pull failed for '$branch' (non-fast-forward or network error)."
-		log_info "Please run: git pull to resolve or rebase as appropriate."
+		log_warn "Auto-pull failed (non-fast-forward or network). Run: git pull"
 	fi
 else
-	log_debug "No upstream configured for branch '$branch'; skipping auto-pull."
+	log_debug "No upstream for '$branch' — skipping auto-pull."
+fi
+
+# ── Verify hooks are active ────────────────────────
+current_hooks_path="$(git config --local core.hooksPath 2>/dev/null || echo "")"
+if [ "$current_hooks_path" != "vendor/scripts/hooks" ]; then
+	log_warn "Git hooks not active. Run: make configure-hooks"
 fi
 
 exit 0

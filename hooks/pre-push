@@ -1,14 +1,27 @@
 #!/bin/bash
+# ─────────────────────────────────────────────────────────
+#  pre-push — Validate commits and protect branches
+#  Uses bash for arrays and [[ ]].
+#  Bypass: SKIP_PRE_PUSH=1 git push …
+# ─────────────────────────────────────────────────────────
+set -uo pipefail
 . "$(dirname "$0")/log_hook.sh"
+
+# Allow explicit bypass
+if [ "${SKIP_PRE_PUSH:-0}" = "1" ]; then
+	log_warn "pre-push: hook bypassed via SKIP_PRE_PUSH=1"
+	exit 0
+fi
 
 remote="$1"
 url="$2"
 
-FORBIDDEN_PATTERNS=("WIP" "update" "squash!" "debug" "temporary")
-PROTECTED_BRANCHES=("main" "master" "develop")
-TYPES_REGEX="^(feat|fix|docs|refactor|test)\([^)]+\):[[:space:]]*.+$"
-ALLOWED_TYPES="feat, fix, docs, refactor, test"
-FORBIDDEN_WORDS="WIP, update, squash!, debug, temporary"
+FORBIDDEN_PATTERNS=("WIP" "squash!" "debug" "temporary" "fixup!")
+HARD_PROTECTED=("main" "master")    # password required — production branches
+SOFT_PROTECTED=("develop")           # Y/n confirmation — integration branch
+TYPES_REGEX="^(feat|fix|docs|refactor|test|chore|style|perf|ci|build|revert)\([^)]+\):[[:space:]]*.+$"
+ALLOWED_TYPES="feat, fix, docs, refactor, test, chore, style, perf, ci, build, revert"
+FORBIDDEN_WORDS="WIP, squash!, debug, temporary, fixup!"
 
 zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
 
@@ -27,7 +40,7 @@ check_override() {
 		secret="$(sed -n '1p' "$ALLOW_FILE" | tr -d '\r\n')"
 		if [ -n "$secret" ]; then
 			# env var override (non-interactive, CI)
-			if [ -n "$GIT_PUSH_OVERRIDE" ] && [ "$GIT_PUSH_OVERRIDE" = "$secret" ]; then
+			if [ -n "${GIT_PUSH_OVERRIDE:-}" ] && [ "${GIT_PUSH_OVERRIDE:-}" = "$secret" ]; then
 				log_success "Push override accepted via GIT_PUSH_OVERRIDE."
 				return 0
 			fi
@@ -51,9 +64,7 @@ check_override() {
 		fi
 	fi
 
-	# If no allow file present, support non-interactive override only via env var is meaningless;
-	# inform user how to enable override locally.
-	if [ -n "$GIT_PUSH_OVERRIDE" ]; then
+	if [ -n "${GIT_PUSH_OVERRIDE:-}" ]; then
 		log_warn "GIT_PUSH_OVERRIDE provided but no local allow file exists; override is disabled."
 	fi
 	return 1
@@ -121,20 +132,35 @@ ask_continue_on_bad_commits() {
 while read local_ref local_oid remote_ref remote_oid; do
 	branch="${local_ref##refs/heads/}"
 
-	for pb in "${PROTECTED_BRANCHES[@]}"; do
+	# ── Tiered branch protection ──────────────────────
+	# main / master  → password required (.git/allow_push)
+	# develop        → simple Y/n confirmation
+	for pb in "${HARD_PROTECTED[@]}"; do
 		if [[ "$branch" == "$pb" ]]; then
-			# ask user for confirmation instead of outright blocking
+			log_warn "Branch '$branch' is production — direct push requires the override password."
 			if check_override; then
-				log_info "Override used: allowing push to protected branch '$branch'."
+				log_info "Override accepted: allowing push to '$branch'."
+				continue 2
+			fi
+			log_error "Push to '$branch' denied — password required."
+			log_info "To set a password:  echo 'your-secret' > .git/allow_push"
+			log_info "Or push to a feature branch and open a pull request."
+			exit 1
+		fi
+	done
+
+	for pb in "${SOFT_PROTECTED[@]}"; do
+		if [[ "$branch" == "$pb" ]]; then
+			if check_override; then
+				log_info "Override accepted: allowing push to '$branch'."
 				continue 2
 			fi
 			if confirm_push "$branch"; then
-				log_info "Proceeding with push to protected branch '$branch' after confirmation."
+				log_info "Proceeding with push to '$branch' after confirmation."
 				continue 2
 			else
-				log_error "Push to protected branch '$branch' denied."
-				log_info "Protected branches: ${PROTECTED_BRANCHES[*]}"
-				log_warn "Please push to a feature branch and open a pull request instead."
+				log_error "Push to '$branch' cancelled."
+				log_warn "Push to a feature branch and open a pull request instead."
 				exit 1
 			fi
 		fi
@@ -177,7 +203,7 @@ while read local_ref local_oid remote_ref remote_oid; do
 		fi
 
 		# Check description length
-		description=$(printf "%s" "$header" | sed -E 's/^(feat|fix|docs|refactor|test)\([^)]+\):[[:space:]]*(.*)$/\2/I')
+		description=$(printf "%s" "$header" | sed -E 's/^(feat|fix|docs|refactor|test|chore|style|perf|ci|build|revert)\([^)]+\):[[:space:]]*(.*)$/\2/I')
 		len=$(printf '%s' "$description" | wc -c | tr -d '[:space:]')
 		if [ "$len" -lt 25 ] || [ "$len" -gt 170 ]; then
 			printf "%s\t%s\tBAD_LENGTH(%s)\n" "$commit" "$(echo "$description" | tr '\n' ' ')" "$len" >> "$fail_list_file"

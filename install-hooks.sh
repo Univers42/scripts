@@ -1,7 +1,12 @@
 #!/bin/bash
+# ─────────────────────────────────────────────────────────
+#  install-hooks.sh — Symlink git hooks into .git/hooks/
+#  Called by: make configure-hooks (preferred) or manually
+# ─────────────────────────────────────────────────────────
+set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOKS_SRC="$REPO_ROOT/scripts/hooks"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+HOOKS_SRC="$REPO_ROOT/vendor/scripts/hooks"
 HOOKS_DST="$REPO_ROOT/.git/hooks"
 
 declare -A HOOK_MAP=(
