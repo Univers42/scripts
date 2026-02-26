@@ -1,0 +1,221 @@
+{
+  "name": "glasscode",
+  "displayName": "GlassCode - Glassmorphism for VS Code",
+  "description": "Apply beautiful glassmorphism transparency effects to VS Code sections — editor, terminal, sidebar, and more. Fully customizable opacity, blur intensity, and per-section control.",
+  "version": "1.0.0",
+  "publisher": "transcendence",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Themes",
+    "Other"
+  ],
+  "keywords": [
+    "glassmorphism",
+    "transparency",
+    "glass",
+    "blur",
+    "aesthetic",
+    "ui",
+    "theme",
+    "frosted",
+    "translucent"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "glassCode.enable",
+        "title": "GlassCode: Enable Glass Effect"
+      },
+      {
+        "command": "glassCode.disable",
+        "title": "GlassCode: Disable Glass Effect"
+      },
+      {
+        "command": "glassCode.reload",
+        "title": "GlassCode: Reload Glass Effect"
+      },
+      {
+        "command": "glassCode.configureSection",
+        "title": "GlassCode: Configure Section Transparency"
+      }
+    ],
+    "configuration": {
+      "title": "GlassCode",
+      "properties": {
+        "glassCode.glassmorphism": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable glassmorphism blur effect (backdrop-filter). When disabled, only transparency is applied without frosted glass blur."
+        },
+        "glassCode.backgroundImage": {
+          "type": "string",
+          "default": "",
+          "description": "Optional background wallpaper image (URL or absolute file path). Leave empty for no wallpaper. The glassmorphism effect looks best with a background image."
+        },
+        "glassCode.backgroundOpacity": {
+          "type": "number",
+          "default": 0.15,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Opacity of the background wallpaper image (0.0 = invisible, 1.0 = fully visible)."
+        },
+        "glassCode.editor.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply glass effect to the editor area (code editing space)."
+        },
+        "glassCode.editor.opacity": {
+          "type": "number",
+          "default": 0.82,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Editor background opacity (0.0 = fully transparent, 1.0 = fully opaque)."
+        },
+        "glassCode.editor.blur": {
+          "type": "number",
+          "default": 12,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Editor glassmorphism blur radius in pixels."
+        },
+        "glassCode.panel.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply glass effect to the bottom panel (terminal, debug console, output, ports)."
+        },
+        "glassCode.panel.opacity": {
+          "type": "number",
+          "default": 0.78,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Panel background opacity (0.0 = fully transparent, 1.0 = fully opaque)."
+        },
+        "glassCode.panel.blur": {
+          "type": "number",
+          "default": 14,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Panel glassmorphism blur radius in pixels."
+        },
+        "glassCode.sidebar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply glass effect to the sidebar (explorer, search, extensions, etc.)."
+        },
+        "glassCode.sidebar.opacity": {
+          "type": "number",
+          "default": 0.80,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Sidebar background opacity (0.0 = fully transparent, 1.0 = fully opaque)."
+        },
+        "glassCode.sidebar.blur": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Sidebar glassmorphism blur radius in pixels."
+        },
+        "glassCode.activityBar.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Apply glass effect to the activity bar (leftmost icon bar)."
+        },
+        "glassCode.activityBar.opacity": {
+          "type": "number",
+          "default": 0.85,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Activity bar background opacity."
+        },
+        "glassCode.activityBar.blur": {
+          "type": "number",
+          "default": 8,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Activity bar glassmorphism blur radius in pixels."
+        },
+        "glassCode.statusBar.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Apply glass effect to the status bar (bottom bar)."
+        },
+        "glassCode.statusBar.opacity": {
+          "type": "number",
+          "default": 0.85,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Status bar background opacity."
+        },
+        "glassCode.statusBar.blur": {
+          "type": "number",
+          "default": 8,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Status bar glassmorphism blur radius in pixels."
+        },
+        "glassCode.titleBar.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Apply glass effect to the title bar."
+        },
+        "glassCode.titleBar.opacity": {
+          "type": "number",
+          "default": 0.90,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Title bar background opacity."
+        },
+        "glassCode.titleBar.blur": {
+          "type": "number",
+          "default": 6,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Title bar glassmorphism blur radius in pixels."
+        },
+        "glassCode.tabBar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply glass effect to the editor tab bar."
+        },
+        "glassCode.tabBar.opacity": {
+          "type": "number",
+          "default": 0.80,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Tab bar background opacity."
+        },
+        "glassCode.tabBar.blur": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Tab bar glassmorphism blur radius in pixels."
+        }
+      }
+    }
+  }
+}
