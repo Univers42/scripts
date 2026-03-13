@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.mermaid-cache/
+.venv-pdf/
+node_modules/
+*.pdf
+*.html
+package.json
+package-lock.json
+md-to-pdf.mjs
+setup-pdf.sh
+convert.sh

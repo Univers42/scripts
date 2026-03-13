@@ -151,6 +151,85 @@
   --toc-h3-size:      9.5pt;
   --toc-num-size:     8pt;
   --toc-border:       var(--border);
+
+  /* ── Callouts / Admonitions  (Obsidian  > [!type]  —  Apple-style) ────── */
+
+  --callout-radius:         10px;
+  --callout-border-width:   3px;
+  --callout-margin:         var(--sp-5) 0;
+  --callout-font-size:      9.5pt;
+  --callout-line-height:    1.65;
+  --callout-shadow:         0 1px 3px rgba(0,0,0,0.04);
+  --callout-body-padding:   10px 16px 12px;
+  --callout-header-padding: 8px 16px 7px;
+  --callout-header-gap:     7px;
+  --callout-title-weight:   600;
+  --callout-title-size:     8.5pt;
+  --callout-title-tracking: 0.03em;
+  --callout-title-transform:uppercase;
+  --callout-icon-size:      0.85em;
+
+  /* ── Per-type palettes ─────────────────────────────────────────────────── */
+
+  --callout-note-border:    #8e8e93;
+  --callout-note-bg:        #f5f5f7;
+  --callout-note-color:     #636366;
+  --callout-note-emoji:     "📝";
+
+  --callout-info-border:    #007aff;
+  --callout-info-bg:        #f0f5ff;
+  --callout-info-color:     #0062cc;
+  --callout-info-emoji:     "ℹ️";
+
+  --callout-tip-border:     #30b0c7;
+  --callout-tip-bg:         #eefafb;
+  --callout-tip-color:      #0e7c8a;
+  --callout-tip-emoji:      "💡";
+
+  --callout-success-border: #34c759;
+  --callout-success-bg:     #f0faf2;
+  --callout-success-color:  #248a3d;
+  --callout-success-emoji:  "✅";
+
+  --callout-warning-border: #ff9f0a;
+  --callout-warning-bg:     #fffaf0;
+  --callout-warning-color:  #a35200;
+  --callout-warning-emoji:  "⚠️";
+
+  --callout-danger-border:  #ff3b30;
+  --callout-danger-bg:      #fff5f5;
+  --callout-danger-color:   #c9190b;
+  --callout-danger-emoji:   "🔴";
+
+  --callout-bug-border:     #af52de;
+  --callout-bug-bg:         #faf5ff;
+  --callout-bug-color:      #8230b5;
+  --callout-bug-emoji:      "🐛";
+
+  --callout-example-border: #5856d6;
+  --callout-example-bg:     #f5f4ff;
+  --callout-example-color:  #3f3db0;
+  --callout-example-emoji:  "📎";
+
+  --callout-quote-border:   #a1a1aa;
+  --callout-quote-bg:       #fafaf9;
+  --callout-quote-color:    #71717a;
+  --callout-quote-emoji:    "�";
+
+  --callout-question-border:#ff9500;
+  --callout-question-bg:    #fffaf0;
+  --callout-question-color: #b36b00;
+  --callout-question-emoji: "❓";
+
+  --callout-abstract-border:#32ade6;
+  --callout-abstract-bg:    #f0f9ff;
+  --callout-abstract-color: #1a7cb5;
+  --callout-abstract-emoji: "📋";
+
+  --callout-todo-border:    #34c759;
+  --callout-todo-bg:        #f0faf2;
+  --callout-todo-color:     #248a3d;
+  --callout-todo-emoji:     "☑️";
 }
 
 
@@ -482,6 +561,101 @@ blockquote blockquote {
   border-left-color: var(--border);
   background: var(--surface-alt);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CALLOUTS / ADMONITIONS  (Obsidian-style  > [!type] )
+   ─  Apple-compact: inline icon · thin separator · flat tint · no badge
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Container ─────────────────────────────────────────────────────────── */
+.callout {
+  margin: var(--callout-margin);
+  padding: 0;
+  border-left: var(--callout-border-width) solid var(--callout-note-border);
+  border-radius: 0 var(--callout-radius) var(--callout-radius) 0;
+  background: var(--callout-note-bg);
+  font-size: var(--callout-font-size);
+  line-height: var(--callout-line-height);
+  box-shadow: var(--callout-shadow);
+  overflow: hidden;
+  page-break-inside: avoid;
+}
+
+/* ── Header row ────────────────────────────────────────────────────────── */
+.callout-header {
+  display: flex;
+  align-items: center;
+  gap: var(--callout-header-gap);
+  padding: var(--callout-header-padding);
+}
+
+/* ── Inline icon (no badge) ────────────────────────────────────────────── */
+.callout-icon {
+  font-size: var(--callout-icon-size);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Title ─────────────────────────────────────────────────────────────── */
+.callout-title {
+  font-weight: var(--callout-title-weight);
+  font-size: var(--callout-title-size);
+  letter-spacing: var(--callout-title-tracking);
+  text-transform: var(--callout-title-transform);
+  color: var(--callout-note-color);
+}
+
+/* ── Body ──────────────────────────────────────────────────────────────── */
+.callout-body {
+  padding: var(--callout-body-padding);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.callout-body p            { margin: 0 0 var(--sp-2); }
+.callout-body p:last-child { margin-bottom: 0; }
+.callout-body code         { font-size: 0.86em; }
+.callout-body strong       { color: var(--ink); }
+.callout-body ul,
+.callout-body ol           { margin: var(--sp-2) 0; padding-left: var(--sp-5); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Per-type overrides  —  border · background · title colour
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.callout-info     { border-left-color: var(--callout-info-border);     background: var(--callout-info-bg); }
+.callout-info     .callout-title { color: var(--callout-info-color); }
+
+.callout-tip      { border-left-color: var(--callout-tip-border);      background: var(--callout-tip-bg); }
+.callout-tip      .callout-title { color: var(--callout-tip-color); }
+
+.callout-success  { border-left-color: var(--callout-success-border);  background: var(--callout-success-bg); }
+.callout-success  .callout-title { color: var(--callout-success-color); }
+
+.callout-warning  { border-left-color: var(--callout-warning-border);  background: var(--callout-warning-bg); }
+.callout-warning  .callout-title { color: var(--callout-warning-color); }
+
+.callout-danger   { border-left-color: var(--callout-danger-border);   background: var(--callout-danger-bg); }
+.callout-danger   .callout-title { color: var(--callout-danger-color); }
+
+.callout-bug      { border-left-color: var(--callout-bug-border);      background: var(--callout-bug-bg); }
+.callout-bug      .callout-title { color: var(--callout-bug-color); }
+
+.callout-example  { border-left-color: var(--callout-example-border);  background: var(--callout-example-bg); }
+.callout-example  .callout-title { color: var(--callout-example-color); }
+
+.callout-quote    { border-left-color: var(--callout-quote-border);    background: var(--callout-quote-bg); }
+.callout-quote    .callout-title { color: var(--callout-quote-color); }
+
+.callout-question { border-left-color: var(--callout-question-border); background: var(--callout-question-bg); }
+.callout-question .callout-title { color: var(--callout-question-color); }
+
+.callout-abstract { border-left-color: var(--callout-abstract-border); background: var(--callout-abstract-bg); }
+.callout-abstract .callout-title { color: var(--callout-abstract-color); }
+
+.callout-todo     { border-left-color: var(--callout-todo-border);     background: var(--callout-todo-bg); }
+.callout-todo     .callout-title { color: var(--callout-todo-color); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
