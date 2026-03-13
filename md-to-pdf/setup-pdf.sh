@@ -99,6 +99,7 @@ if $INSTALL_NODE && command -v node &>/dev/null && [[ -d "$SCRIPT_DIR/node_modul
   " 2>/dev/null || echo "  ✓  Node modules present"
 fi
 
+# I need to use virt environmment from python so I can set anywhere the 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Setup complete! Usage:"

@@ -1,0 +1,281 @@
+/*
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  Cover Style:  EDITORIAL                                                 ║
+ * ║                                                                          ║
+ * ║  Warm ivory paper with a strong left accent stripe. Feels like a         ║
+ * ║  printed journal or technical specification from a design studio.         ║
+ * ║                                                                          ║
+ * ║  Usage:                                                                  ║
+ * ║    python3 md-to-pdf.py README.md --cover editorial                     ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER TOKENS
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+
+  /* ── Surface ───────────────────────────────────────────────────────────── */
+  --cover-bg:               #faf8f5;
+  --cover-fg:               #1d1d1f;
+  --cover-accent:           #bf4800;
+  --cover-muted:            #6e6e73;
+  --cover-subtle:           #c7c7cc;
+
+  /* ── Glow / decoration — editorial uses a left stripe instead ──────────── */
+  --cover-glow:             none;
+  --cover-glow2:            none;
+  --cover-stripe-width:     6px;
+  --cover-stripe-color:     var(--cover-accent);
+  --cover-stripe-offset:    10%;
+
+  /* ── Header bar ────────────────────────────────────────────────────────── */
+  --cover-header-padding:   44px 10% 0;
+  --cover-brand-color:      var(--cover-muted);
+  --cover-brand-size:       9pt;
+  --cover-brand-weight:     600;
+  --cover-brand-tracking:   0.10em;
+  --cover-badge-fg:         var(--cover-accent);
+  --cover-badge-bg:         rgba(191,72,0,0.06);
+  --cover-badge-border:     rgba(191,72,0,0.18);
+  --cover-badge-radius:     4px;
+  --cover-badge-padding:    5px 12px;
+  --cover-badge-size:       7pt;
+  --cover-badge-weight:     600;
+
+  /* ── Body ──────────────────────────────────────────────────────────────── */
+  --cover-body-padding:     0 10%;
+  --cover-body-align:       flex-start;
+
+  /* ── Eyebrow ───────────────────────────────────────────────────────────── */
+  --cover-eyebrow-size:     7.5pt;
+  --cover-eyebrow-weight:   700;
+  --cover-eyebrow-tracking: 0.28em;
+  --cover-eyebrow-color:    var(--cover-accent);
+  --cover-eyebrow-margin:   0 0 20px;
+
+  /* ── Title ─────────────────────────────────────────────────────────────── */
+  --cover-title-size:       30pt;
+  --cover-title-weight:     700;
+  --cover-title-tracking:   -0.02em;
+  --cover-title-leading:    1.14;
+  --cover-title-color:      var(--cover-fg);
+  --cover-title-margin:     0 0 16px;
+
+  /* ── Title accent ──────────────────────────────────────────────────────── */
+  --cover-accent-size:      0.48em;
+  --cover-accent-weight:    400;
+  --cover-accent-color:     var(--cover-muted);
+  --cover-accent-margin:    8px 0 0;
+
+  /* ── Subtitle ──────────────────────────────────────────────────────────── */
+  --cover-sub-size:         11pt;
+  --cover-sub-weight:       400;
+  --cover-sub-leading:      1.65;
+  --cover-sub-color:        var(--cover-muted);
+  --cover-sub-margin:       0 0 36px;
+  --cover-sub-max-width:    460px;
+
+  /* ── Rule ──────────────────────────────────────────────────────────────── */
+  --cover-rule-width:       48px;
+  --cover-rule-height:      2px;
+  --cover-rule-color:       var(--cover-accent);
+  --cover-rule-radius:      0;
+  --cover-rule-margin:      0 0 28px;
+
+  /* ── Metadata ──────────────────────────────────────────────────────────── */
+  --cover-meta-gap:         10px;
+  --cover-meta-k-width:     80px;
+  --cover-meta-k-size:      7pt;
+  --cover-meta-k-weight:    700;
+  --cover-meta-k-tracking:  0.18em;
+  --cover-meta-k-color:     var(--cover-subtle);
+  --cover-meta-v-size:      9.5pt;
+  --cover-meta-v-weight:    500;
+  --cover-meta-v-color:     var(--cover-muted);
+
+  /* ── Footer ────────────────────────────────────────────────────────────── */
+  --cover-foot-padding:     16px 10%;
+  --cover-foot-border:      1px solid rgba(0,0,0,0.06);
+  --cover-foot-text-color:  var(--cover-subtle);
+  --cover-foot-text-size:   6.5pt;
+  --cover-foot-text-tracking: 0.10em;
+  --cover-foot-dots-color:  rgba(0,0,0,0.12);
+  --cover-foot-dots-size:   4pt;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER LAYOUT
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover {
+  page: cover_page;
+  height: 297mm;
+  width:  210mm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--cover-bg);
+  color: var(--cover-fg);
+  position: relative;
+}
+
+/* Left accent stripe — editorial signature element */
+.cover::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--cover-stripe-offset);
+  width: var(--cover-stripe-width);
+  height: 100%;
+  background: var(--cover-stripe-color);
+  z-index: 0;
+}
+
+.cover::after { display: none; }
+
+.cover > * { position: relative; z-index: 1; }
+
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.cover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--cover-header-padding);
+  /* Offset past the stripe */
+  padding-left: calc(var(--cover-stripe-offset) + var(--cover-stripe-width) + 32px);
+}
+
+.brand-logo {
+  font-family: var(--font-display);
+  font-size: var(--cover-brand-size);
+  font-weight: var(--cover-brand-weight);
+  letter-spacing: var(--cover-brand-tracking);
+  text-transform: uppercase;
+  color: var(--cover-brand-color);
+}
+
+.doc-badge {
+  font-family: var(--font-body);
+  font-size: var(--cover-badge-size);
+  font-weight: var(--cover-badge-weight);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cover-badge-fg);
+  background: var(--cover-badge-bg);
+  border: 1px solid var(--cover-badge-border);
+  padding: var(--cover-badge-padding);
+  border-radius: var(--cover-badge-radius);
+}
+
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--cover-body-padding);
+  padding-left: calc(var(--cover-stripe-offset) + var(--cover-stripe-width) + 32px);
+}
+
+.cover-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--cover-eyebrow-size);
+  font-weight: var(--cover-eyebrow-weight);
+  letter-spacing: var(--cover-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--cover-eyebrow-color);
+  margin: var(--cover-eyebrow-margin);
+}
+
+.cover-h1,
+h1.cover-h1 {
+  font-family: var(--font-display) !important;
+  font-size: var(--cover-title-size) !important;
+  font-weight: var(--cover-title-weight) !important;
+  color: var(--cover-title-color) !important;
+  line-height: var(--cover-title-leading) !important;
+  letter-spacing: var(--cover-title-tracking) !important;
+  margin: var(--cover-title-margin) !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.cover-title-accent {
+  display: block;
+  margin-top: var(--cover-accent-margin);
+  color: var(--cover-accent-color);
+  font-size: var(--cover-accent-size);
+  font-weight: var(--cover-accent-weight);
+  letter-spacing: 0;
+}
+
+.cover-sub {
+  font-size: var(--cover-sub-size);
+  color: var(--cover-sub-color);
+  font-weight: var(--cover-sub-weight);
+  line-height: var(--cover-sub-leading);
+  margin: var(--cover-sub-margin);
+  max-width: var(--cover-sub-max-width);
+}
+
+.cover-rule {
+  width: var(--cover-rule-width);
+  height: var(--cover-rule-height);
+  background: var(--cover-rule-color);
+  border-radius: var(--cover-rule-radius);
+  margin: var(--cover-rule-margin);
+}
+
+
+/* ── Metadata ────────────────────────────────────────────────────────────── */
+.cover-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cover-meta-gap);
+}
+
+.meta-row { display: flex; align-items: baseline; }
+
+.meta-k {
+  min-width: var(--cover-meta-k-width);
+  font-size: var(--cover-meta-k-size);
+  font-weight: var(--cover-meta-k-weight);
+  letter-spacing: var(--cover-meta-k-tracking);
+  text-transform: uppercase;
+  color: var(--cover-meta-k-color);
+}
+
+.meta-v {
+  font-size: var(--cover-meta-v-size);
+  font-weight: var(--cover-meta-v-weight);
+  color: var(--cover-meta-v-color);
+}
+
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.cover-foot {
+  padding: var(--cover-foot-padding);
+  padding-left: calc(var(--cover-stripe-offset) + var(--cover-stripe-width) + 32px);
+  border-top: var(--cover-foot-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cover-foot-text {
+  font-size: var(--cover-foot-text-size);
+  letter-spacing: var(--cover-foot-text-tracking);
+  text-transform: uppercase;
+  color: var(--cover-foot-text-color);
+  font-weight: 500;
+}
+
+.cover-foot-dots {
+  font-size: var(--cover-foot-dots-size);
+  color: var(--cover-foot-dots-color);
+  letter-spacing: 5px;
+}

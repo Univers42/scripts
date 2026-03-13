@@ -27,6 +27,9 @@ usage() {
   echo "    --title    \"...\"   Override document title"
   echo "    --subtitle \"...\"   Override document subtitle"
   echo "    --author   \"...\"   Author name for cover page"
+  echo "    --theme    \"...\"   Path to custom CSS content theme (default: theme.css)"
+  echo "    --cover    \"...\"   Cover style name: noir, minimal, gradient, editorial"
+  echo "    --list-covers      List available cover styles and exit"
   echo "    --no-cover         Skip cover page"
   echo "    --no-cache         Force re-render all Mermaid diagrams (Python only)"
   echo "    --debug-html       Also save the intermediate HTML file"
@@ -50,9 +53,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --engine)  FORCE_ENGINE="$2"; shift 2 ;;
     --help)    usage; exit 0 ;;
-    --title|--subtitle|--author)
+    --title|--subtitle|--author|--theme|--cover)
                PASS_ARGS+=("$1" "$2"); shift 2 ;;
-    --no-cover|--no-cache|--debug-html)
+    --no-cover|--no-cache|--debug-html|--list-covers)
                PASS_ARGS+=("$1"); shift ;;
     -*)        echo -e "${RED}✗${NC}  Unknown option: $1"; usage; exit 1 ;;
     *)

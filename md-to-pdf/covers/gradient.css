@@ -1,0 +1,297 @@
+/*
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  Cover Style:  GRADIENT                                                  ║
+ * ║                                                                          ║
+ * ║  Rich indigo-to-violet gradient with warm amber accent marks.            ║
+ * ║  Bold, modern, conference-poster energy.                                 ║
+ * ║                                                                          ║
+ * ║  Usage:                                                                  ║
+ * ║    python3 md-to-pdf.py README.md --cover gradient                      ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER TOKENS
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+
+  /* ── Surface ───────────────────────────────────────────────────────────── */
+  --cover-bg:               linear-gradient(140deg,
+                              #1a1033 0%,
+                              #2d1b69 35%,
+                              #5b21b6 70%,
+                              #7c3aed 100%);
+  --cover-fg:               #f5f5f7;
+  --cover-accent:           #fbbf24;
+  --cover-muted:            rgba(255,255,255,0.55);
+  --cover-subtle:           rgba(255,255,255,0.20);
+
+  /* ── Glow / decoration ─────────────────────────────────────────────────── */
+  --cover-glow:             radial-gradient(circle, rgba(251,191,36,0.10) 0%, transparent 60%);
+  --cover-glow-top:         -20%;
+  --cover-glow-right:       -15%;
+  --cover-glow-w:           60%;
+  --cover-glow-h:           60%;
+  --cover-glow2:            radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 55%);
+  --cover-glow2-bottom:     -15%;
+  --cover-glow2-left:       -10%;
+  --cover-glow2-w:          55%;
+  --cover-glow2-h:          55%;
+
+  /* ── Header bar ────────────────────────────────────────────────────────── */
+  --cover-header-padding:   44px 10% 0;
+  --cover-brand-color:      rgba(255,255,255,0.45);
+  --cover-brand-size:       10pt;
+  --cover-brand-weight:     600;
+  --cover-brand-tracking:   0.08em;
+  --cover-badge-fg:         var(--cover-accent);
+  --cover-badge-bg:         rgba(251,191,36,0.10);
+  --cover-badge-border:     rgba(251,191,36,0.25);
+  --cover-badge-radius:     100px;
+  --cover-badge-padding:    5px 14px;
+  --cover-badge-size:       7pt;
+  --cover-badge-weight:     600;
+
+  /* ── Body ──────────────────────────────────────────────────────────────── */
+  --cover-body-padding:     0 10%;
+  --cover-body-align:       flex-start;
+
+  /* ── Eyebrow ───────────────────────────────────────────────────────────── */
+  --cover-eyebrow-size:     8pt;
+  --cover-eyebrow-weight:   700;
+  --cover-eyebrow-tracking: 0.22em;
+  --cover-eyebrow-color:    var(--cover-accent);
+  --cover-eyebrow-margin:   0 0 24px;
+
+  /* ── Title ─────────────────────────────────────────────────────────────── */
+  --cover-title-size:       36pt;
+  --cover-title-weight:     800;
+  --cover-title-tracking:   -0.03em;
+  --cover-title-leading:    1.08;
+  --cover-title-color:      #ffffff;
+  --cover-title-margin:     0 0 16px;
+
+  /* ── Title accent ──────────────────────────────────────────────────────── */
+  --cover-accent-size:      0.48em;
+  --cover-accent-weight:    400;
+  --cover-accent-color:     var(--cover-muted);
+  --cover-accent-margin:    10px 0 0;
+
+  /* ── Subtitle ──────────────────────────────────────────────────────────── */
+  --cover-sub-size:         12pt;
+  --cover-sub-weight:       400;
+  --cover-sub-leading:      1.55;
+  --cover-sub-color:        var(--cover-muted);
+  --cover-sub-margin:       0 0 40px;
+  --cover-sub-max-width:    480px;
+
+  /* ── Rule ──────────────────────────────────────────────────────────────── */
+  --cover-rule-width:       48px;
+  --cover-rule-height:      3px;
+  --cover-rule-color:       var(--cover-accent);
+  --cover-rule-radius:      2px;
+  --cover-rule-margin:      0 0 32px;
+
+  /* ── Metadata ──────────────────────────────────────────────────────────── */
+  --cover-meta-gap:         12px;
+  --cover-meta-k-width:     80px;
+  --cover-meta-k-size:      7pt;
+  --cover-meta-k-weight:    600;
+  --cover-meta-k-tracking:  0.18em;
+  --cover-meta-k-color:     rgba(255,255,255,0.25);
+  --cover-meta-v-size:      9.5pt;
+  --cover-meta-v-weight:    500;
+  --cover-meta-v-color:     rgba(255,255,255,0.60);
+
+  /* ── Footer ────────────────────────────────────────────────────────────── */
+  --cover-foot-padding:     16px 10%;
+  --cover-foot-border:      1px solid rgba(255,255,255,0.08);
+  --cover-foot-text-color:  rgba(255,255,255,0.22);
+  --cover-foot-text-size:   6.5pt;
+  --cover-foot-text-tracking: 0.10em;
+  --cover-foot-dots-color:  rgba(255,255,255,0.15);
+  --cover-foot-dots-size:   4pt;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER LAYOUT
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover {
+  page: cover_page;
+  height: 297mm;
+  width:  210mm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--cover-bg);
+  color: var(--cover-fg);
+  position: relative;
+}
+
+/* Warm glow — top-right */
+.cover::before {
+  content: "";
+  position: absolute;
+  top: var(--cover-glow-top);
+  right: var(--cover-glow-right);
+  width: var(--cover-glow-w);
+  height: var(--cover-glow-h);
+  background: var(--cover-glow);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Purple glow — bottom-left */
+.cover::after {
+  content: "";
+  position: absolute;
+  bottom: var(--cover-glow2-bottom);
+  left: var(--cover-glow2-left);
+  width: var(--cover-glow2-w);
+  height: var(--cover-glow2-h);
+  background: var(--cover-glow2);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cover > * { position: relative; z-index: 1; }
+
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.cover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--cover-header-padding);
+}
+
+.brand-logo {
+  font-family: var(--font-display);
+  font-size: var(--cover-brand-size);
+  font-weight: var(--cover-brand-weight);
+  letter-spacing: var(--cover-brand-tracking);
+  color: var(--cover-brand-color);
+}
+
+.doc-badge {
+  font-family: var(--font-body);
+  font-size: var(--cover-badge-size);
+  font-weight: var(--cover-badge-weight);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cover-badge-fg);
+  background: var(--cover-badge-bg);
+  border: 1px solid var(--cover-badge-border);
+  padding: var(--cover-badge-padding);
+  border-radius: var(--cover-badge-radius);
+}
+
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--cover-body-padding);
+}
+
+.cover-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--cover-eyebrow-size);
+  font-weight: var(--cover-eyebrow-weight);
+  letter-spacing: var(--cover-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--cover-eyebrow-color);
+  margin: var(--cover-eyebrow-margin);
+}
+
+.cover-h1,
+h1.cover-h1 {
+  font-family: var(--font-display) !important;
+  font-size: var(--cover-title-size) !important;
+  font-weight: var(--cover-title-weight) !important;
+  color: var(--cover-title-color) !important;
+  line-height: var(--cover-title-leading) !important;
+  letter-spacing: var(--cover-title-tracking) !important;
+  margin: var(--cover-title-margin) !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.cover-title-accent {
+  display: block;
+  margin-top: var(--cover-accent-margin);
+  color: var(--cover-accent-color);
+  font-size: var(--cover-accent-size);
+  font-weight: var(--cover-accent-weight);
+  letter-spacing: 0;
+}
+
+.cover-sub {
+  font-size: var(--cover-sub-size);
+  color: var(--cover-sub-color);
+  font-weight: var(--cover-sub-weight);
+  line-height: var(--cover-sub-leading);
+  margin: var(--cover-sub-margin);
+  max-width: var(--cover-sub-max-width);
+}
+
+.cover-rule {
+  width: var(--cover-rule-width);
+  height: var(--cover-rule-height);
+  background: var(--cover-rule-color);
+  border-radius: var(--cover-rule-radius);
+  margin: var(--cover-rule-margin);
+}
+
+
+/* ── Metadata ────────────────────────────────────────────────────────────── */
+.cover-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cover-meta-gap);
+}
+
+.meta-row { display: flex; align-items: baseline; }
+
+.meta-k {
+  min-width: var(--cover-meta-k-width);
+  font-size: var(--cover-meta-k-size);
+  font-weight: var(--cover-meta-k-weight);
+  letter-spacing: var(--cover-meta-k-tracking);
+  text-transform: uppercase;
+  color: var(--cover-meta-k-color);
+}
+
+.meta-v {
+  font-size: var(--cover-meta-v-size);
+  font-weight: var(--cover-meta-v-weight);
+  color: var(--cover-meta-v-color);
+}
+
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.cover-foot {
+  padding: var(--cover-foot-padding);
+  border-top: var(--cover-foot-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cover-foot-text {
+  font-size: var(--cover-foot-text-size);
+  letter-spacing: var(--cover-foot-text-tracking);
+  text-transform: uppercase;
+  color: var(--cover-foot-text-color);
+  font-weight: 500;
+}
+
+.cover-foot-dots {
+  font-size: var(--cover-foot-dots-size);
+  color: var(--cover-foot-dots-color);
+  letter-spacing: 5px;
+}

@@ -1,0 +1,467 @@
+/*
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  Cover Style:  GEOMETRIC                                                 ║
+ * ║                                                                          ║
+ * ║  Dark canvas with layered geometric shapes — floating diamond grids,     ║
+ * ║  intersecting line patterns, glowing accent nodes, and a large           ║
+ * ║  rotated square frame that anchors the composition.                       ║
+ * ║                                                                          ║
+ * ║  Inspired by: Swiss-style posters, Stripe annual letters, Vercel's      ║
+ * ║  brand system, and architectural blueprint overlays.                      ║
+ * ║                                                                          ║
+ * ║  Usage:                                                                  ║
+ * ║    python3 md-to-pdf.py README.md --cover geometric                     ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER TOKENS
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+
+  /* ── Surface ───────────────────────────────────────────────────────────── */
+  --cover-bg:               #0a0a0f;
+  --cover-fg:               #f0f0f5;
+  --cover-accent:           #6366f1;           /* Indigo-500                   */
+  --cover-accent-2:         #22d3ee;           /* Cyan-400 — secondary nodes   */
+  --cover-accent-3:         #f472b6;           /* Pink-400 — tertiary highlight */
+  --cover-muted:            rgba(255,255,255,0.50);
+  --cover-subtle:           rgba(255,255,255,0.14);
+
+  /* ── Geometric overlays ────────────────────────────────────────────────── */
+  /*    Grid dots (repeating-radial on .cover)                                */
+  --geo-dot-color:          rgba(99,102,241,0.10);
+  --geo-dot-size:           1.5px;
+  --geo-dot-gap:            28px;
+
+  /*    Large rotated square frame (::before)                                 */
+  --geo-frame-size:         320px;
+  --geo-frame-border:       1.5px solid rgba(99,102,241,0.22);
+  --geo-frame-rotate:       35deg;
+  --geo-frame-top:          12%;
+  --geo-frame-right:        -4%;
+
+  /*    Floating accent circle (::after)                                      */
+  --geo-circle-size:        180px;
+  --geo-circle-bg:          radial-gradient(circle,
+                              rgba(34,211,238,0.12) 0%,
+                              rgba(34,211,238,0.03) 45%,
+                              transparent 70%);
+  --geo-circle-bottom:      18%;
+  --geo-circle-right:       12%;
+
+  /*    Diamond / corner accent on cover-body::before                         */
+  --geo-diamond-size:       64px;
+  --geo-diamond-border:     1.5px solid rgba(244,114,182,0.28);
+  --geo-diamond-top:        -32px;
+  --geo-diamond-left:       0;
+
+  /*    Horizontal scan-line on cover-body::after                             */
+  --geo-line-width:         120px;
+  --geo-line-height:        1px;
+  --geo-line-color:         rgba(99,102,241,0.30);
+  --geo-line-bottom:        48px;
+
+  /*    Corner ticks on cover-header::after                                   */
+  --geo-tick-size:          32px;
+  --geo-tick-weight:        1.5px;
+  --geo-tick-color:         rgba(99,102,241,0.25);
+
+  /* ── Glow / decoration ─────────────────────────────────────────────────── */
+  --cover-glow:             radial-gradient(ellipse 55% 50% at 75% 25%,
+                              rgba(99,102,241,0.11) 0%,
+                              transparent 70%);
+  --cover-glow2:            radial-gradient(ellipse 45% 45% at 20% 80%,
+                              rgba(34,211,238,0.06) 0%,
+                              transparent 65%);
+
+  /* ── Header bar ────────────────────────────────────────────────────────── */
+  --cover-header-padding:   44px 10% 0;
+  --cover-brand-color:      rgba(255,255,255,0.35);
+  --cover-brand-size:       9pt;
+  --cover-brand-weight:     600;
+  --cover-brand-tracking:   0.12em;
+  --cover-badge-fg:         var(--cover-accent);
+  --cover-badge-bg:         rgba(99,102,241,0.08);
+  --cover-badge-border:     rgba(99,102,241,0.22);
+  --cover-badge-radius:     6px;
+  --cover-badge-padding:    5px 14px;
+  --cover-badge-size:       7pt;
+  --cover-badge-weight:     650;
+
+  /* ── Body ──────────────────────────────────────────────────────────────── */
+  --cover-body-padding:     0 10%;
+  --cover-body-align:       flex-start;
+
+  /* ── Eyebrow ───────────────────────────────────────────────────────────── */
+  --cover-eyebrow-size:     7.5pt;
+  --cover-eyebrow-weight:   700;
+  --cover-eyebrow-tracking: 0.30em;
+  --cover-eyebrow-color:    var(--cover-accent);
+  --cover-eyebrow-margin:   0 0 28px;
+
+  /* ── Title ─────────────────────────────────────────────────────────────── */
+  --cover-title-size:       38pt;
+  --cover-title-weight:     800;
+  --cover-title-tracking:   -0.035em;
+  --cover-title-leading:    1.06;
+  --cover-title-color:      var(--cover-fg);
+  --cover-title-margin:     0 0 14px;
+
+  /* ── Title accent ──────────────────────────────────────────────────────── */
+  --cover-accent-size:      0.42em;
+  --cover-accent-weight:    400;
+  --cover-accent-color:     var(--cover-muted);
+  --cover-accent-margin:    12px 0 0;
+
+  /* ── Subtitle ──────────────────────────────────────────────────────────── */
+  --cover-sub-size:         11.5pt;
+  --cover-sub-weight:       400;
+  --cover-sub-leading:      1.60;
+  --cover-sub-color:        var(--cover-muted);
+  --cover-sub-margin:       0 0 44px;
+  --cover-sub-max-width:    420px;
+
+  /* ── Rule — transformed into a geometric accent bar ────────────────────── */
+  --cover-rule-width:       52px;
+  --cover-rule-height:      3px;
+  --cover-rule-color:       var(--cover-accent);
+  --cover-rule-radius:      0;
+  --cover-rule-margin:      0 0 36px;
+
+  /* ── Metadata ──────────────────────────────────────────────────────────── */
+  --cover-meta-gap:         11px;
+  --cover-meta-k-width:     80px;
+  --cover-meta-k-size:      6.5pt;
+  --cover-meta-k-weight:    700;
+  --cover-meta-k-tracking:  0.22em;
+  --cover-meta-k-color:     rgba(255,255,255,0.22);
+  --cover-meta-v-size:      9pt;
+  --cover-meta-v-weight:    500;
+  --cover-meta-v-color:     rgba(255,255,255,0.58);
+
+  /* ── Footer ────────────────────────────────────────────────────────────── */
+  --cover-foot-padding:     18px 10%;
+  --cover-foot-border:      1px solid rgba(255,255,255,0.05);
+  --cover-foot-text-color:  rgba(255,255,255,0.18);
+  --cover-foot-text-size:   6pt;
+  --cover-foot-text-tracking: 0.14em;
+  --cover-foot-dots-color:  rgba(99,102,241,0.30);
+  --cover-foot-dots-size:   3.5pt;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER LAYOUT — Dark canvas with geometric overlays
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover {
+  page: cover_page;
+  height: 297mm;
+  width:  210mm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--cover-fg);
+  position: relative;
+
+  /* ── Layered background ──
+     Layer 1: Subtle dot-grid pattern (architectural blueprint feel)
+     Layer 2: Main ambient glow — top-right indigo
+     Layer 3: Secondary glow — bottom-left cyan
+     Layer 4: Solid dark base                                                */
+  background:
+    radial-gradient(circle, var(--geo-dot-color) var(--geo-dot-size), transparent var(--geo-dot-size)),
+    var(--cover-glow),
+    var(--cover-glow2),
+    var(--cover-bg);
+  background-size:
+    var(--geo-dot-gap) var(--geo-dot-gap),
+    100% 100%,
+    100% 100%,
+    100% 100%;
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   GEOMETRIC LAYER 1 — Large rotated square frame (top-right)
+   A 45°-ish rotated wireframe square, partially cropped by overflow:hidden.
+   Creates a dramatic architectural/blueprint anchor.
+   ────────────────────────────────────────────────────────────────────────── */
+.cover::before {
+  content: "";
+  position: absolute;
+  top: var(--geo-frame-top);
+  right: var(--geo-frame-right);
+  width: var(--geo-frame-size);
+  height: var(--geo-frame-size);
+  border: var(--geo-frame-border);
+  transform: rotate(var(--geo-frame-rotate));
+  pointer-events: none;
+  z-index: 0;
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   GEOMETRIC LAYER 2 — Floating glowing circle (bottom-right)
+   Soft radial glow, like a node on a network graph.
+   ────────────────────────────────────────────────────────────────────────── */
+.cover::after {
+  content: "";
+  position: absolute;
+  bottom: var(--geo-circle-bottom);
+  right: var(--geo-circle-right);
+  width: var(--geo-circle-size);
+  height: var(--geo-circle-size);
+  border-radius: 50%;
+  background: var(--geo-circle-bg);
+  border: 1px solid rgba(34,211,238,0.10);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cover > * { position: relative; z-index: 1; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HEADER — with corner-tick accent
+   ══════════════════════════════════════════════════════════════════════════ */
+.cover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--cover-header-padding);
+  position: relative;
+}
+
+/* Corner tick marks — top-right crosshair (registration-mark feel) */
+.cover-header::after {
+  content: "";
+  position: absolute;
+  top: 36px;
+  right: 10%;
+  width: var(--geo-tick-size);
+  height: var(--geo-tick-size);
+  border-right: var(--geo-tick-weight) solid var(--geo-tick-color);
+  border-top:   var(--geo-tick-weight) solid var(--geo-tick-color);
+  pointer-events: none;
+}
+
+.brand-logo {
+  font-family: var(--font-display);
+  font-size: var(--cover-brand-size);
+  font-weight: var(--cover-brand-weight);
+  letter-spacing: var(--cover-brand-tracking);
+  text-transform: uppercase;
+  color: var(--cover-brand-color);
+}
+
+.doc-badge {
+  font-family: var(--font-mono);
+  font-size: var(--cover-badge-size);
+  font-weight: var(--cover-badge-weight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cover-badge-fg);
+  background: var(--cover-badge-bg);
+  border: 1px solid var(--cover-badge-border);
+  padding: var(--cover-badge-padding);
+  border-radius: var(--cover-badge-radius);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BODY — title block with diamond accent + scan-line
+   ══════════════════════════════════════════════════════════════════════════ */
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--cover-body-padding);
+  position: relative;
+}
+
+/* Diamond accent — small rotated square near the eyebrow */
+.cover-body::before {
+  content: "";
+  position: absolute;
+  top: var(--geo-diamond-top);
+  left: var(--geo-diamond-left);
+  width: var(--geo-diamond-size);
+  height: var(--geo-diamond-size);
+  border: var(--geo-diamond-border);
+  transform: rotate(45deg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Horizontal scan-line — subtle rule near the bottom of the body area */
+.cover-body::after {
+  content: "";
+  position: absolute;
+  bottom: var(--geo-line-bottom);
+  left: 10%;
+  width: var(--geo-line-width);
+  height: var(--geo-line-height);
+  background: linear-gradient(90deg,
+    var(--geo-line-color) 0%,
+    transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+
+/* ── Eyebrow ─────────────────────────────────────────────────────────────── */
+.cover-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--cover-eyebrow-size);
+  font-weight: var(--cover-eyebrow-weight);
+  letter-spacing: var(--cover-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--cover-eyebrow-color);
+  margin: var(--cover-eyebrow-margin);
+  position: relative;
+  z-index: 1;
+}
+
+/* Small dot before eyebrow — like a status indicator / node */
+.cover-eyebrow::before {
+  content: "●";
+  font-size: 5pt;
+  margin-right: 8px;
+  color: var(--cover-accent-2);
+  vertical-align: 1px;
+}
+
+
+/* ── Title ───────────────────────────────────────────────────────────────── */
+.cover-h1,
+h1.cover-h1 {
+  font-family: var(--font-display) !important;
+  font-size: var(--cover-title-size) !important;
+  font-weight: var(--cover-title-weight) !important;
+  color: var(--cover-title-color) !important;
+  line-height: var(--cover-title-leading) !important;
+  letter-spacing: var(--cover-title-tracking) !important;
+  margin: var(--cover-title-margin) !important;
+  padding: 0 !important;
+  border: none !important;
+  position: relative;
+  z-index: 1;
+}
+
+.cover-title-accent {
+  display: block;
+  margin-top: var(--cover-accent-margin);
+  color: var(--cover-accent-color);
+  font-size: var(--cover-accent-size);
+  font-weight: var(--cover-accent-weight);
+  letter-spacing: 0.01em;
+}
+
+
+/* ── Subtitle ────────────────────────────────────────────────────────────── */
+.cover-sub {
+  font-size: var(--cover-sub-size);
+  color: var(--cover-sub-color);
+  font-weight: var(--cover-sub-weight);
+  line-height: var(--cover-sub-leading);
+  margin: var(--cover-sub-margin);
+  max-width: var(--cover-sub-max-width);
+}
+
+
+/* ── Rule — geometric accent bar with node dots ──────────────────────────── */
+.cover-rule {
+  width: var(--cover-rule-width);
+  height: var(--cover-rule-height);
+  background: linear-gradient(90deg,
+    var(--cover-accent) 0%,
+    var(--cover-accent-2) 100%);
+  border-radius: var(--cover-rule-radius);
+  margin: var(--cover-rule-margin);
+  position: relative;
+}
+
+/* Small node dot at the end of the rule */
+.cover-rule::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cover-accent-2);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   METADATA
+   ══════════════════════════════════════════════════════════════════════════ */
+.cover-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cover-meta-gap);
+}
+
+.meta-row { display: flex; align-items: baseline; }
+
+.meta-k {
+  min-width: var(--cover-meta-k-width);
+  font-family: var(--font-mono);
+  font-size: var(--cover-meta-k-size);
+  font-weight: var(--cover-meta-k-weight);
+  letter-spacing: var(--cover-meta-k-tracking);
+  text-transform: uppercase;
+  color: var(--cover-meta-k-color);
+}
+
+.meta-v {
+  font-size: var(--cover-meta-v-size);
+  font-weight: var(--cover-meta-v-weight);
+  color: var(--cover-meta-v-color);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FOOTER — with bottom-left corner tick for symmetry
+   ══════════════════════════════════════════════════════════════════════════ */
+.cover-foot {
+  padding: var(--cover-foot-padding);
+  border-top: var(--cover-foot-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+/* Bottom-left corner tick — mirrors the header's top-right tick */
+.cover-foot::before {
+  content: "";
+  position: absolute;
+  bottom: 14px;
+  left: 10%;
+  width: var(--geo-tick-size);
+  height: var(--geo-tick-size);
+  border-left:   var(--geo-tick-weight) solid var(--geo-tick-color);
+  border-bottom: var(--geo-tick-weight) solid var(--geo-tick-color);
+  pointer-events: none;
+}
+
+.cover-foot-text {
+  font-family: var(--font-mono);
+  font-size: var(--cover-foot-text-size);
+  letter-spacing: var(--cover-foot-text-tracking);
+  text-transform: uppercase;
+  color: var(--cover-foot-text-color);
+  font-weight: 500;
+}
+
+.cover-foot-dots {
+  font-size: var(--cover-foot-dots-size);
+  color: var(--cover-foot-dots-color);
+  letter-spacing: 8px;
+}

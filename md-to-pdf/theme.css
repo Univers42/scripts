@@ -1,0 +1,654 @@
+/*
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  md-to-pdf  —  Content Theme (body, TOC, headings, tables, code…)       ║
+ * ║                                                                          ║
+ * ║  This file controls EVERYTHING except the cover page.                    ║
+ * ║  Cover styles live in  covers/<name>.css  and are loaded separately.     ║
+ * ║                                                                          ║
+ * ║  Customise:                                                              ║
+ * ║    1. Copy this file → my-theme.css, tweak :root tokens                 ║
+ * ║    2. python3 md-to-pdf.py README.md --theme my-theme.css               ║
+ * ║                                                                          ║
+ * ║  Pick a cover:                                                           ║
+ * ║    python3 md-to-pdf.py README.md --cover noir                          ║
+ * ║    python3 md-to-pdf.py README.md --cover editorial                     ║
+ * ║    python3 md-to-pdf.py README.md --cover gradient                      ║
+ * ║    python3 md-to-pdf.py README.md --cover minimal                       ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS  —  Change these, the entire document follows.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+
+  /* ── Base palette ──────────────────────────────────────────────────────── */
+  --ink:              #1d1d1f;       /* Primary text                           */
+  --mid:              #424245;       /* Body text                              */
+  --muted:            #86868b;       /* Secondary / captions                   */
+  --subtle:           #aeaeb2;       /* Faintest text (footnotes, watermarks)  */
+  --surface:          #f5f5f7;       /* Light panels                           */
+  --surface-alt:      #fbfbfd;       /* Alternate stripe                       */
+  --border:           #d2d2d7;       /* Dividers                               */
+  --border-light:     #e8e8ed;       /* Lighter dividers                       */
+  --bg:               #ffffff;       /* Page background                        */
+
+  /* ── Accent palette ────────────────────────────────────────────────────── */
+  --accent:           #0071e3;       /* Primary accent                         */
+  --accent-hover:     #0077ed;       /* Hover variant                          */
+  --accent-soft:      rgba(0,113,227,0.06);  /* Tinted backgrounds            */
+  --accent-warm:      #bf4800;       /* Inline code highlights                 */
+  --accent-2:         #30d158;       /* Secondary accent (success, alt links)  */
+  --accent-3:         #ff9f0a;       /* Tertiary accent (warnings, tags)       */
+  --danger:           #ff3b30;       /* Errors, destructive                    */
+
+  /* ── Typography ────────────────────────────────────────────────────────── */
+  --font-body:        -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display:     -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:        "SF Mono", "Fira Code", "Cascadia Code", Consolas,
+                      "Liberation Mono", Menlo, monospace;
+
+  --body-size:        10pt;
+  --body-leading:     1.72;
+  --body-weight:      400;
+  --bold-weight:      600;
+  --h1-size:          24pt;
+  --h1-weight:        700;
+  --h2-size:          17pt;
+  --h2-weight:        650;
+  --h3-size:          13pt;
+  --h3-weight:        650;
+  --h4-size:          11pt;
+  --h4-weight:        600;
+  --code-size:        0.84em;
+  --small-size:       8.5pt;
+  --caption-size:     8pt;
+
+  /* ── Spacing scale (4px base) ──────────────────────────────────────────── */
+  --sp-1:             4px;
+  --sp-2:             8px;
+  --sp-3:             12px;
+  --sp-4:             16px;
+  --sp-5:             20px;
+  --sp-6:             24px;
+  --sp-8:             32px;
+  --sp-10:            40px;
+  --sp-12:            48px;
+  --sp-16:            64px;
+
+  /* ── Radius scale ──────────────────────────────────────────────────────── */
+  --radius-sm:        4px;
+  --radius-md:        8px;
+  --radius-lg:        12px;
+  --radius-pill:      100px;
+
+  /* ── Page geometry ─────────────────────────────────────────────────────── */
+  --page-size:        A4;
+  --page-margin-v:    24mm;
+  --page-margin-h:    22mm;
+
+  /* ── Code blocks ───────────────────────────────────────────────────────── */
+  --code-bg:          #1d1d1f;
+  --code-fg:          #e5e5ea;
+  --code-inline-bg:   var(--surface);
+  --code-inline-fg:   var(--accent-warm);
+  --code-radius:      var(--radius-lg);
+  --code-padding:     var(--sp-4) var(--sp-5);
+
+  /* ── Tables ────────────────────────────────────────────────────────────── */
+  --table-header-bg:  var(--surface);
+  --table-header-fg:  var(--ink);
+  --table-stripe-bg:  var(--surface-alt);
+  --table-radius:     var(--radius-md);
+  --table-cell-pad:   9px 14px;
+
+  /* ── Blockquotes ───────────────────────────────────────────────────────── */
+  --bq-bg:            var(--surface);
+  --bq-fg:            var(--mid);
+  --bq-border:        var(--accent);
+  --bq-border-width:  3px;
+  --bq-radius:        0 var(--radius-md) var(--radius-md) 0;
+  --bq-padding:       var(--sp-4) var(--sp-5);
+
+  /* ── Lists ─────────────────────────────────────────────────────────────── */
+  --list-indent:      var(--sp-6);
+  --list-marker-color:var(--accent);
+
+  /* ── Links ─────────────────────────────────────────────────────────────── */
+  --link-color:       var(--accent);
+  --link-weight:      500;
+  --link-decoration:  none;
+  --link-hover-color: var(--accent-hover);
+  --link-hover-bg:    rgba(0,113,227,0.10);
+  --link-hover-decoration: underline;
+  --link-hover-radius:3px;
+  --link-visited-color:var(--accent);
+  --link-focus-outline:2px solid rgba(0,113,227,0.25);
+  --link-focus-offset: 2px;
+  --link-active-color:var(--accent-hover);
+
+  /* ── Selection ─────────────────────────────────────────────────────────── */
+  --selection-bg:     rgba(0,113,227,0.18);
+  --selection-color:  inherit;
+
+  /* ── HR ────────────────────────────────────────────────────────────────── */
+  --hr-color:         var(--border);
+  --hr-thickness:     1px;
+  --hr-margin:        var(--sp-8) 0;
+
+  /* ── Diagrams ──────────────────────────────────────────────────────────── */
+  --diagram-margin:   var(--sp-6) 0;
+  --diagram-max-h:    800px;
+
+  /* ── TOC ───────────────────────────────────────────────────────────────── */
+  --toc-title-size:   20pt;
+  --toc-title-weight: 700;
+  --toc-h2-size:      10.5pt;
+  --toc-h2-weight:    600;
+  --toc-h3-size:      9.5pt;
+  --toc-num-size:     8pt;
+  --toc-border:       var(--border);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE SETUP
+   ═══════════════════════════════════════════════════════════════════════════ */
+@page {
+  size: var(--page-size);
+  margin: var(--page-margin-v) var(--page-margin-h);
+
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  @top-right {
+    content: "DOC_TITLE";
+    font-family: var(--font-body);
+    font-size: 7pt;
+    color: var(--border);
+    letter-spacing: 0.04em;
+  }
+}
+
+@page cover_page {
+  margin: 0;
+  @bottom-center { content: none; }
+  @top-right     { content: none; }
+}
+
+/* Reset page counter after cover — the content starts at page 1 */
+@page post_cover {
+  counter-reset: page;
+}
+
+.page-reset {
+  page: post_cover;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  visibility: hidden;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESET & BODY
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  font-weight: var(--body-weight);
+  color: var(--mid);
+  line-height: var(--body-leading);
+  background: var(--bg);
+  overflow-wrap: break-word;
+  hyphens: none;
+  -weasyprint-hyphens: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLE OF CONTENTS  —  Clean numbered list with accent markers
+   ═══════════════════════════════════════════════════════════════════════════ */
+.toc {
+  page-break-after: always;
+  padding-bottom: var(--sp-5);
+  margin-top: var(--sp-5);
+}
+
+h2.toc-title {
+  font-family: var(--font-display) !important;
+  font-size: var(--toc-title-size) !important;
+  font-weight: var(--toc-title-weight) !important;
+  color: var(--ink) !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 0 var(--sp-3) !important;
+  margin: 0 0 var(--sp-5) !important;
+  letter-spacing: -0.02em;
+  border-bottom: 2px solid var(--accent) !important;
+  display: inline-block;
+}
+
+.toc-root {
+  list-style: none;
+  counter-reset: toc-h2;
+  padding: 0;
+  margin: 0;
+}
+
+li.toc-h2 {
+  counter-increment: toc-h2;
+  border-bottom: 1px solid var(--toc-border);
+}
+
+li.toc-h2 > a {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: 11px 0 9px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: var(--toc-h2-size);
+  font-weight: var(--toc-h2-weight);
+  border-radius: var(--link-hover-radius);
+  transition: color .15s ease, background .15s ease;
+  margin: 0;
+}
+
+li.toc-h2 > a:hover {
+  color: var(--link-hover-color);
+  background: var(--link-hover-bg);
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-left: -6px;
+  margin-right: -6px;
+}
+
+li.toc-h2 .toc-num::before {
+  content: counter(toc-h2, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: var(--toc-num-size);
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.toc-sub {
+  list-style: none;
+  padding: var(--sp-1) 0 var(--sp-3) 36px;
+  margin: 0;
+  counter-reset: toc-h3;
+}
+
+li.toc-h3 {
+  counter-increment: toc-h3;
+  padding: 3px 0;
+}
+
+li.toc-h3 a {
+  font-size: var(--toc-h3-size);
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: var(--link-hover-radius);
+  transition: color .15s ease, background .15s ease;
+  padding: 1px 4px;
+  margin: -1px -4px;
+}
+
+li.toc-h3 a:hover {
+  color: var(--link-hover-color);
+  background: var(--link-hover-bg);
+}
+
+li.toc-h3 a::before {
+  content: counter(toc-h2) "." counter(toc-h3) "  ";
+  font-family: var(--font-mono);
+  font-size: var(--toc-num-size);
+  color: var(--border);
+  font-weight: 400;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADINGS
+   ═══════════════════════════════════════════════════════════════════════════ */
+h1 {
+  font-family: var(--font-display);
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: var(--sp-12) 0 var(--sp-5);
+  padding-bottom: var(--sp-3);
+  page-break-after: avoid;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--ink);
+  letter-spacing: -0.018em;
+  line-height: 1.28;
+  margin: var(--sp-10) 0 var(--sp-4);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1.5px solid var(--border);
+  page-break-after: avoid;
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  color: var(--ink);
+  margin: var(--sp-8) 0 var(--sp-3);
+  page-break-after: avoid;
+}
+
+h4 {
+  font-family: var(--font-display);
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: var(--sp-5) 0 var(--sp-2);
+  page-break-after: avoid;
+}
+
+h5 {
+  font-family: var(--font-display);
+  font-size: var(--body-size);
+  font-weight: var(--bold-weight);
+  color: var(--ink);
+  margin: var(--sp-4) 0 var(--sp-1);
+  page-break-after: avoid;
+}
+
+h6 {
+  font-family: var(--font-display);
+  font-size: var(--small-size);
+  font-weight: var(--bold-weight);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: var(--sp-4) 0 var(--sp-1);
+  page-break-after: avoid;
+}
+
+/* Keep headings glued to the content that follows */
+h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
+  page-break-before: avoid;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROSE
+   ═══════════════════════════════════════════════════════════════════════════ */
+p {
+  margin: 0 0 var(--sp-3);
+  orphans: 3;
+  widows: 3;
+}
+
+strong { color: var(--ink); font-weight: var(--bold-weight); }
+em     { font-style: italic; }
+
+a {
+  color: var(--link-color);
+  font-weight: var(--link-weight);
+  text-decoration: var(--link-decoration);
+  transition: color .15s ease, background .15s ease;
+  border-radius: var(--link-hover-radius);
+  padding: 1px 3px;
+  margin: -1px -3px;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+a:visited { color: var(--link-visited-color); }
+
+a:hover {
+  color: var(--link-hover-color);
+  background: var(--link-hover-bg);
+  text-decoration: var(--link-hover-decoration);
+  outline: none;
+}
+
+a:focus {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus-visible {
+  outline: var(--link-focus-outline);
+  outline-offset: var(--link-focus-offset);
+}
+
+a:active { color: var(--link-active-color); }
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-color);
+}
+
+/* Footnote-style superscript links */
+sup a { font-weight: 400; font-size: 0.80em; }
+
+/* Better visibility of abbreviations */
+abbr[title] {
+  text-decoration: underline dotted var(--border);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOCKQUOTES  —  Callout-style with rounded corners
+   ═══════════════════════════════════════════════════════════════════════════ */
+blockquote {
+  margin: var(--sp-5) 0;
+  padding: var(--bq-padding);
+  background: var(--bq-bg);
+  color: var(--bq-fg);
+  border-left: var(--bq-border-width) solid var(--bq-border);
+  border-radius: var(--bq-radius);
+  font-size: 9.5pt;
+  line-height: 1.65;
+  page-break-inside: avoid;
+}
+
+blockquote p       { margin: 0 0 var(--sp-2); }
+blockquote p:last-child { margin-bottom: 0; }
+blockquote strong  { color: var(--ink); }
+blockquote code    { font-size: 0.88em; }
+
+/* Nested blockquotes */
+blockquote blockquote {
+  margin: var(--sp-3) 0 0;
+  border-left-color: var(--border);
+  background: var(--surface-alt);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLES  —  Rounded corners require border-collapse: separate
+   ═══════════════════════════════════════════════════════════════════════════ */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: var(--sp-5) 0;
+  font-size: 9pt;
+  border: 1px solid var(--border);
+  border-radius: var(--table-radius);
+  overflow: hidden;
+  page-break-inside: auto;
+}
+
+thead th {
+  background: var(--table-header-bg);
+  color: var(--table-header-fg);
+  font-weight: var(--bold-weight);
+  padding: var(--table-cell-pad);
+  text-align: left;
+  border-bottom: 1.5px solid var(--border);
+  font-size: var(--small-size);
+  letter-spacing: 0.01em;
+}
+
+/* Rounded top corners on first/last header cells */
+thead th:first-child  { border-top-left-radius: var(--table-radius); }
+thead th:last-child   { border-top-right-radius: var(--table-radius); }
+
+tbody tr                   { border-bottom: 1px solid var(--border-light); }
+tbody tr:nth-child(even)   { background: var(--table-stripe-bg); }
+tbody td {
+  padding: var(--table-cell-pad);
+  vertical-align: top;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border-light);
+}
+tbody td:first-child       { font-weight: var(--bold-weight); color: var(--ink); }
+
+/* Remove bottom border from last row (the table border handles it) */
+tbody tr:last-child td     { border-bottom: none; }
+
+/* Rounded bottom corners on first/last cell of last row */
+tbody tr:last-child td:first-child { border-bottom-left-radius: var(--table-radius); }
+tbody tr:last-child td:last-child  { border-bottom-right-radius: var(--table-radius); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CODE
+   ═══════════════════════════════════════════════════════════════════════════ */
+code {
+  font-family: var(--font-mono);
+  font-size: var(--code-size);
+  background: var(--code-inline-bg);
+  color: var(--code-inline-fg);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: var(--code-padding);
+  border-radius: var(--code-radius);
+  font-size: var(--small-size);
+  line-height: 1.6;
+  margin: var(--sp-4) 0;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LISTS & MISC
+   ═══════════════════════════════════════════════════════════════════════════ */
+ul, ol {
+  padding-left: var(--list-indent);
+  margin: var(--sp-3) 0 var(--sp-4);
+}
+
+li {
+  margin-bottom: var(--sp-2);
+  line-height: 1.65;
+}
+li::marker { color: var(--list-marker-color); font-weight: var(--bold-weight); }
+
+/* Nested lists — tighter spacing */
+li > ul, li > ol {
+  margin-top: var(--sp-1);
+  margin-bottom: var(--sp-1);
+}
+
+hr {
+  border: none;
+  height: var(--hr-thickness);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--hr-color) 15%,
+    var(--hr-color) 85%,
+    transparent 100%);
+  margin: var(--hr-margin);
+}
+
+img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.diagram {
+  text-align: center;
+  margin: var(--diagram-margin);
+  page-break-inside: avoid;
+}
+
+.diagram img {
+  max-width: 100%;
+  max-height: var(--diagram-max-h);
+  border: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT UTILITIES  —  Orphan/widow protection, page-break hints
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Keep tables and code blocks from splitting awkwardly */
+table                { page-break-inside: auto; }
+thead                { display: table-header-group; }
+tr                   { page-break-inside: avoid; }
+pre                  { page-break-inside: avoid; }
+blockquote           { page-break-inside: avoid; }
+
+/* Paragraphs: protect against single-line orphans/widows */
+p                    { orphans: 3; widows: 3; }
+
+/* Images: don't split across pages */
+img                  { page-break-inside: avoid; }
+
+/* LaTeX / math blocks — keep together */
+.MathJax, mjx-container {
+  page-break-inside: avoid;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DEFINITION LISTS (if markdown extension produces them)
+   ═══════════════════════════════════════════════════════════════════════════ */
+dt {
+  font-weight: var(--bold-weight);
+  color: var(--ink);
+  margin-top: var(--sp-3);
+}
+
+dd {
+  margin-left: var(--sp-6);
+  margin-bottom: var(--sp-2);
+  color: var(--mid);
+}
