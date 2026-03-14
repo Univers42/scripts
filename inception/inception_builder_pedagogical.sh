@@ -232,9 +232,8 @@ wp_admin_user: admin
 wp_admin_password: CHANGE_ME
 # leave blank to auto-generate: <login42>@student.42madrid.com
 wp_admin_email:
-# Optional: force a specific WordPress tag (recommended if your network
-# has trouble with newly published tags).
-# Example: php8.4-fpm-alpine
+# Optional: force a specific WordPress tag.
+# Use non-fpm tags only (example: latest, php8.4-apache).
 wp_image_tag:
 
 # === Redis (required when 'redis' is in services) ===
@@ -301,14 +300,17 @@ resolve_images() {
     local wp_tag
     if [ -n "$WP_IMAGE_TAG" ]; then
         wp_tag="$WP_IMAGE_TAG"
+        if printf '%s' "$wp_tag" | grep -Eqi 'fpm'; then
+            warn "Configured wp_image_tag contains 'fpm' (${wp_tag}); forcing non-fpm tag 'latest'."
+            wp_tag='latest'
+        fi
         info "Using configured WordPress tag override: wordpress:${wp_tag}"
     elif [ "$RESOLVE_TAGS" = "true" ]; then
-        # Keep WordPress on conservative, broadly available Alpine tags.
-        # Avoid immediately adopting very new minor tags that may be flaky
-        # on some mirrors/networks right after release.
-        wp_tag="$(pick_stable_alpine_tag "wordpress" '^php8\.(2|3|4)-fpm-alpine$' 'php8.4-fpm-alpine')"
+        # Prefer broadly available official non-fpm tags.
+        # We intentionally avoid *-fpm* variants here.
+        wp_tag="$(pick_stable_alpine_tag "wordpress" '^latest$|^php8\.(2|3|4)-apache$' 'latest')"
     else
-        wp_tag='php8.4-fpm-alpine'
+        wp_tag='latest'
     fi
     IMG_WORDPRESS="wordpress:${wp_tag}"
 
@@ -1334,9 +1336,28 @@ generate_wordpress() {
     cat > "$dir/Dockerfile" << EOF
 # wordpress image resolved from Docker Hub:
 # ${IMG_WORDPRESS}
-# No extra package is required: the wrapper entrypoint uses /bin/sh.
+# If the selected image does not include php-fpm, install it at build time.
 
 FROM ${IMG_WORDPRESS}
+
+# Ensure php-fpm exists, regardless of the selected WordPress variant.
+# Supports both Alpine (apk) and Debian/Ubuntu (apt-get) based tags.
+RUN set -eux; \
+    if command -v php-fpm >/dev/null 2>&1 || command -v php-fpm84 >/dev/null 2>&1 || command -v php-fpm83 >/dev/null 2>&1 || command -v php-fpm82 >/dev/null 2>&1 || command -v php-fpm81 >/dev/null 2>&1; then \
+        echo "php-fpm already available in base image"; \
+    elif command -v apk >/dev/null 2>&1; then \
+        apk add --no-cache php84-fpm php83-fpm php82-fpm php81-fpm 2>/dev/null || \
+        apk add --no-cache php83-fpm 2>/dev/null || \
+        apk add --no-cache php82-fpm 2>/dev/null || \
+        apk add --no-cache php81-fpm; \
+    elif command -v apt-get >/dev/null 2>&1; then \
+        apt-get update; \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends php-fpm; \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "Unsupported base image: cannot install php-fpm automatically" >&2; \
+        exit 1; \
+    fi
 
 COPY conf/php-overrides.ini /usr/local/etc/php/conf.d/php-overrides.ini
 COPY tools/entrypoint.sh /entrypoint.sh
@@ -1404,7 +1425,7 @@ EOF
 # Thin wrapper around the official WordPress image entrypoint.
 # The official entrypoint handles:
 #   - wp-config.php generation from WORDPRESS_DB_* environment vars.
-#   - php-fpm startup (passed in via CMD ["php-fpm"]).
+#   - runtime bootstrapping before PHP starts.
 #
 # Learning goal:
 #   Understand why the official image's entrypoint is reused here
@@ -1417,10 +1438,29 @@ EOF
 # =============================================================
 set -eu
 
+# Use the first available php-fpm binary name.
+# Alpine packages are versioned (php-fpm84/php-fpm83/...), while other
+# images usually provide an unversioned php-fpm command.
+php_fpm_bin=""
+for candidate in php-fpm php-fpm84 php-fpm83 php-fpm82 php-fpm81; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        php_fpm_bin="$candidate"
+        break
+    fi
+done
+
+if [ -z "$php_fpm_bin" ]; then
+    printf '%s\n' "No php-fpm binary found in container PATH." >&2
+    exit 1
+fi
+
 # All WORDPRESS_* environment variables defined in srcs/.env are
 # automatically read by docker-entrypoint.sh to configure WordPress.
-# "$@" forwards the CMD arguments — typically "php-fpm".
-exec docker-entrypoint.sh "$@"
+# "$@" forwards CMD args if provided by the user.
+if [ "$#" -gt 0 ]; then
+    exec docker-entrypoint.sh "$@"
+fi
+exec docker-entrypoint.sh "$php_fpm_bin"
 EOF
     chmod +x "$dir/tools/entrypoint.sh"
 
