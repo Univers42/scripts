@@ -84,6 +84,11 @@ is_known_service() {
     return 1
 }
 
+is_valid_service_name() {
+    local target="$1"
+    printf '%s' "$target" | grep -Eq '^[a-z0-9][a-z0-9_-]*$'
+}
+
 add_service_if_missing() {
     local target="$1"
     contains_service "$target" || SELECTED_SERVICES+=("$target")
@@ -115,8 +120,15 @@ create_config_template() {
 login42: YOUR_LOGIN        # e.g. johndoe
 
 # --- Services to generate (space or comma-separated) ---
-# Available: nginx  mariadb  wordpress  redis  ftp  adminer  static
-services:                  # e.g. nginx mariadb wordpress
+# Built-in pedagogical services:
+#   nginx  mariadb  wordpress  redis  ftp  adminer  static
+#
+# Custom service names are also allowed.
+# Example: nodejs api worker
+#
+# Built-in services get tailored Dockerfiles/config files.
+# Custom services get a generic editable scaffold.
+services:                  # e.g. nginx mariadb wordpress nodejs
 
 # --- Project settings (optional - derived from login42 if blank) ---
 output_dir:                # defaults to <login42>_inception
@@ -236,8 +248,8 @@ validate_config() {
 
     local svc
     for svc in $svc_list; do
-        if ! is_known_service "$svc"; then
-            say "  [unknown] service '$svc'  (available: ${SERVICES[*]})"
+        if ! is_valid_service_name "$svc"; then
+            say "  [invalid] service '$svc'  (allowed: lowercase letters, digits, '-' and '_')"
             errors=$(( errors + 1 ))
         fi
     done
@@ -339,7 +351,7 @@ load_config() {
     SELECTED_SERVICES=()
     local svc
     for svc in $raw_svc; do
-        is_known_service "$svc" && add_service_if_missing "$svc" || true
+        is_valid_service_name "$svc" && add_service_if_missing "$svc" || true
     done
 
     # Project settings
@@ -386,9 +398,16 @@ prepare_output_tree() {
             rm -rf "$OUTPUT_DIR"
         else
             say ""
-            say "Directory '$OUTPUT_DIR' already exists."
-            say "Set 'overwrite: true' in your config file to replace it, or change 'output_dir'."
-            exit 1
+            printf "Directory '%s' already exists. Replace it? [y/N]: " "$OUTPUT_DIR"
+            local answer=""
+            read -r answer
+            answer="$(printf '%s' "$answer" | tr '[:upper:]' '[:lower:]' | xargs)"
+            if [ "$answer" = "y" ] || [ "$answer" = "yes" ]; then
+                rm -rf "$OUTPUT_DIR"
+            else
+                say "Aborted by user."
+                exit 1
+            fi
         fi
     fi
 
@@ -633,6 +652,25 @@ EOF
 EOF
     fi
 
+    local service
+    for service in "${SELECTED_SERVICES[@]}"; do
+        if is_known_service "$service"; then
+            continue
+        fi
+
+        cat >> "$f" << EOF
+  ${service}:
+    build: ./requirements/${service}
+    container_name: ${service}
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Add ports, volumes, command, or environment here once you know
+    # how this custom service should run.
+
+EOF
+    done
+
     cat >> "$f" << 'EOF'
 volumes:
   wp_data:
@@ -724,6 +762,84 @@ Generated as a minimal educational baseline.
 - Improve readiness and failure handling.
 - Move sensitive values to safer secret management.
 EOF
+}
+
+generate_custom_service() {
+    local service="$1"
+    is_known_service "$service" && return 0
+
+    local dir="$OUTPUT_DIR/srcs/requirements/$service"
+
+    cat > "$dir/Dockerfile" << EOF
+# Generic service scaffold for: ${service}
+#
+# This fallback keeps the builder open-ended when you add services that
+# do not yet have a dedicated pedagogical generator.
+#
+# Replace this base image with the official image for your stack when possible.
+# Example for Node.js:
+#   FROM node:alpine
+#
+# Fallback: ${IMG_ALPINE_BASE}
+
+FROM ${IMG_ALPINE_BASE}
+
+RUN apk add --no-cache bash
+
+WORKDIR /app
+
+COPY conf/README.conf /app/README.conf
+COPY tools/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+EOF
+
+    cat > "$dir/conf/README.conf" << EOF
+###############################################################
+# Custom service scaffold: ${service}
+#
+# The builder generated this file because '${service}' is not one
+# of the built-in pedagogical services.
+#
+# What to do next:
+#   1. Replace the Dockerfile base image with the official image
+#      for your stack when available.
+#   2. Add the real config file(s) your service needs here.
+#   3. Update docker-compose.yml ports, volumes, and environment.
+#
+# Safe fallback:
+#   Leave this scaffold in place and the container will still build,
+#   but it will only run the placeholder entrypoint.
+###############################################################
+EOF
+
+    cat > "$dir/tools/entrypoint.sh" << 'EOF'
+#!/usr/bin/env sh
+# =============================================================
+# Custom service entrypoint
+#
+# Placeholder startup script for services that do not have a
+# dedicated built-in generator yet.
+#
+# Learning goal:
+#   Use this file as the first place to encode how your service
+#   boots inside a container.
+#
+# Safe fallback:
+#   If you do not replace this script yet, it keeps the container
+#   alive so you can inspect it with docker exec and iterate.
+# =============================================================
+set -eu
+
+printf '%s\n' "Custom service scaffold: replace tools/entrypoint.sh with your real startup command."
+printf '%s\n' "Example for Node.js: exec node server.js"
+
+exec sh -c 'while true; do sleep 3600; done'
+EOF
+    chmod +x "$dir/tools/entrypoint.sh"
+
+    write_service_readme "$service"
 }
 
 generate_nginx() {
@@ -1555,6 +1671,13 @@ EOF
     write_service_readme "static"
 }
 
+generate_custom_services() {
+    local service
+    for service in "${SELECTED_SERVICES[@]}"; do
+        generate_custom_service "$service"
+    done
+}
+
 print_summary() {
     say ""
     say "Generation complete."
@@ -1610,6 +1733,7 @@ main() {
     generate_ftp
     generate_adminer
     generate_static
+    generate_custom_services
 
     print_summary
 }
