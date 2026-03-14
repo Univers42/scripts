@@ -784,8 +784,6 @@ generate_custom_service() {
 
 FROM ${IMG_ALPINE_BASE}
 
-RUN apk add --no-cache bash
-
 WORKDIR /app
 
 COPY conf/README.conf /app/README.conf
@@ -853,7 +851,7 @@ generate_nginx() {
 
 FROM ${IMG_NGINX}
 
-RUN apk add --no-cache openssl bash
+RUN apk add --no-cache openssl
 
 COPY conf/default.conf /etc/nginx/conf.d/default.conf
 COPY tools/entrypoint.sh /entrypoint.sh
@@ -1031,7 +1029,7 @@ generate_mariadb() {
 
 FROM ${IMG_MARIADB_BASE}
 
-RUN apk add --no-cache mariadb mariadb-client bash
+RUN apk add --no-cache mariadb mariadb-client
 
 COPY conf/my.cnf /etc/my.cnf
 COPY tools/entrypoint.sh /entrypoint.sh
@@ -1170,11 +1168,9 @@ generate_wordpress() {
     cat > "$dir/Dockerfile" << EOF
 # wordpress image resolved from Docker Hub:
 # ${IMG_WORDPRESS}
-# Extra package installed: bash (for wrapper entrypoint)
+# No extra package is required: the wrapper entrypoint uses /bin/sh.
 
 FROM ${IMG_WORDPRESS}
-
-RUN apk add --no-cache bash
 
 COPY conf/php-overrides.ini /usr/local/etc/php/conf.d/php-overrides.ini
 COPY tools/entrypoint.sh /entrypoint.sh
@@ -1377,7 +1373,7 @@ generate_ftp() {
 
 FROM ${IMG_FTP_BASE}
 
-RUN apk add --no-cache vsftpd bash
+RUN apk add --no-cache vsftpd
 
 COPY conf/vsftpd.conf /etc/vsftpd/vsftpd.conf
 COPY tools/entrypoint.sh /entrypoint.sh
