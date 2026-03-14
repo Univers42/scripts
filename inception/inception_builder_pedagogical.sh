@@ -30,6 +30,8 @@ REDIS_PASSWORD=""
 FTP_USER=""
 FTP_PASSWORD=""
 
+OVERWRITE="false"
+
 # Resolved image references
 IMG_ALPINE_BASE=""
 IMG_NGINX=""
@@ -52,35 +54,16 @@ say() {
     printf '%s\n' "$1"
 }
 
-ask_line() {
-    local prompt="$1"
-    local var_name="$2"
-    local default_value="${3:-}"
-    local value=""
-
-    if [ -n "$default_value" ]; then
-        printf "%s [%s]: " "$prompt" "$default_value"
-    else
-        printf "%s: " "$prompt"
-    fi
-    read -r value
-    [ -z "$value" ] && value="$default_value"
-    printf -v "$var_name" '%s' "$value"
-}
-
-ask_secret() {
-    local prompt="$1"
-    local var_name="$2"
-    local value=""
-
-    while true; do
-        printf "%s: " "$prompt"
-        read -rs value
-        printf '\n'
-        [ -n "$value" ] && break
-        say "Value cannot be empty."
-    done
-    printf -v "$var_name" '%s' "$value"
+conf_get() {
+    # Returns the value for <key> from a "key: value" config file.
+    # Skips comment lines, strips inline comments and surrounding whitespace.
+    local key="$1"
+    local file="$2"
+    { grep -E "^[[:space:]]*${key}[[:space:]]*:" "$file" 2>/dev/null || true; } \
+        | head -n1 \
+        | sed -E "s/^[[:space:]]*${key}[[:space:]]*:[[:space:]]*//" \
+        | sed -E 's/[[:space:]]*#.*$//' \
+        | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
 }
 
 contains_service() {
@@ -116,21 +99,55 @@ remove_service_if_present() {
     SELECTED_SERVICES=("${rebuilt[@]}")
 }
 
-print_service_catalog() {
-    say "Available services:"
-    say "- nginx"
-    say "- mariadb"
-    say "- wordpress"
-    say "- redis"
-    say "- ftp"
-    say "- adminer"
-    say "- static"
-    say ""
-    say "Commands:"
-    say "- done                 Finish selection"
-    say "- list                 Show selected services"
-    say "- help                 Show help"
-    say "- remove <service>     Remove one selected service"
+create_config_template() {
+    local file="$1"
+    cat > "$file" << 'CONF_TEMPLATE'
+# =============================================================
+#  Inception 42 - Builder Configuration
+# =============================================================
+# The builder watches this file and generates the project once
+# all required fields are filled in.
+#
+# Lines starting with # are comments; inline comments are allowed.
+# Example:   login42: johndoe   # replace with your actual login
+
+# --- Your 42 identity ---
+login42: YOUR_LOGIN        # e.g. johndoe
+
+# --- Services to generate (space or comma-separated) ---
+# Available: nginx  mariadb  wordpress  redis  ftp  adminer  static
+services:                  # e.g. nginx mariadb wordpress
+
+# --- Project settings (optional - derived from login42 if blank) ---
+output_dir:                # defaults to <login42>_inception
+domain:                    # defaults to <login42>.42.fr
+
+# --- Output control ---
+# overwrite: if true, the output_dir will be deleted and re-created
+# without prompting when it already exists.
+# Set to true only after you understand what will be lost.
+# Fallback: false
+overwrite: false
+
+# === MariaDB (required when 'mariadb' is in services) ===
+db_name: wordpress
+db_user: wpuser
+db_password: CHANGE_ME
+db_root_password: CHANGE_ME
+
+# === WordPress (required when 'wordpress' is in services) ===
+wp_title: My Inception Site
+wp_admin_user: admin
+wp_admin_password: CHANGE_ME
+wp_admin_email: CHANGE_ME  # e.g. admin@johndoe.42.fr
+
+# === Redis (required when 'redis' is in services) ===
+redis_password: CHANGE_ME
+
+# === FTP (required when 'ftp' is in services) ===
+ftp_user: ftpuser
+ftp_password: CHANGE_ME
+CONF_TEMPLATE
 }
 
 fetch_tag_list() {
@@ -196,128 +213,182 @@ resolve_images() {
     say "- alpine   -> $IMG_ALPINE_BASE (for mariadb/ftp/static)"
 }
 
-choose_services() {
-    say ""
-    say "Type the name of each service you want, one at a time."
-    say "Example: nginx"
-    say ""
-    print_service_catalog
+validate_config() {
+    local file="$1"
+    local errors=0
 
-    while true; do
-        local raw=""
-        local cmd=""
-        local arg=""
+    local login42
+    login42="$(conf_get login42 "$file")"
+    if [ -z "$login42" ] || [ "$login42" = "YOUR_LOGIN" ]; then
+        say "  [missing] login42"
+        errors=$(( errors + 1 ))
+    fi
 
-        printf "\nWhich service do you want to implement? "
-        read -r raw
-        raw="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]' | xargs)"
-        [ -z "$raw" ] && continue
+    local raw_svc
+    raw_svc="$(conf_get services "$file")"
+    if [ -z "$raw_svc" ]; then
+        say "  [missing] services"
+        return 1
+    fi
 
-        case "$raw" in
-            done) break ;;
-            list)
-                [ "${#SELECTED_SERVICES[@]}" -eq 0 ] && say "No services selected yet." || say "Selected: ${SELECTED_SERVICES[*]}"
-                continue
-                ;;
-            help)
-                print_service_catalog
-                continue
-                ;;
-        esac
+    local svc_list
+    svc_list="$(printf '%s' "$raw_svc" | tr ',' ' ' | tr '[:upper:]' '[:lower:]')"
 
-        cmd="${raw%% *}"
-        if [ "$cmd" = "remove" ]; then
-            arg="${raw#remove }"
-            if [ -z "$arg" ] || [ "$arg" = "remove" ]; then
-                say "Usage: remove <service>"
-                continue
-            fi
-            if ! is_known_service "$arg"; then
-                say "Unknown service: $arg"
-                continue
-            fi
-            remove_service_if_present "$arg"
-            say "Removed: $arg"
-            continue
+    local svc
+    for svc in $svc_list; do
+        if ! is_known_service "$svc"; then
+            say "  [unknown] service '$svc'  (available: ${SERVICES[*]})"
+            errors=$(( errors + 1 ))
         fi
-
-        local token=""
-        local added_any="no"
-        for token in $raw; do
-            if ! is_known_service "$token"; then
-                say "Unknown service: $token"
-                continue
-            fi
-            add_service_if_missing "$token"
-            added_any="yes"
-            say "Added: $token"
-        done
-
-        [ "$added_any" = "yes" ] && say "Current selection: ${SELECTED_SERVICES[*]}"
     done
 
-    if [ "${#SELECTED_SERVICES[@]}" -eq 0 ]; then
-        say ""
-        say "No service selected. At least one service is required."
-        choose_services
-        return
+    local field val
+    if printf '%s\n' $svc_list | grep -qx 'mariadb'; then
+        for field in db_password db_root_password; do
+            val="$(conf_get "$field" "$file")"
+            if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
+                say "  [missing] $field  (required by mariadb)"
+                errors=$(( errors + 1 ))
+            fi
+        done
+    fi
+
+    if printf '%s\n' $svc_list | grep -qx 'wordpress'; then
+        for field in wp_admin_password wp_admin_email; do
+            val="$(conf_get "$field" "$file")"
+            if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
+                say "  [missing] $field  (required by wordpress)"
+                errors=$(( errors + 1 ))
+            fi
+        done
+    fi
+
+    if printf '%s\n' $svc_list | grep -qx 'redis'; then
+        val="$(conf_get redis_password "$file")"
+        if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
+            say "  [missing] redis_password  (required by redis)"
+            errors=$(( errors + 1 ))
+        fi
+    fi
+
+    if printf '%s\n' $svc_list | grep -qx 'ftp'; then
+        val="$(conf_get ftp_password "$file")"
+        if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
+            say "  [missing] ftp_password  (required by ftp)"
+            errors=$(( errors + 1 ))
+        fi
+    fi
+
+    [ "$errors" -eq 0 ]
+}
+
+watch_and_validate() {
+    local file="$1"
+
+    say ""
+    say "Validating $file..."
+    if validate_config "$file"; then
+        return 0
     fi
 
     say ""
-    say "Final selected services: ${SELECTED_SERVICES[*]}"
+    say "Edit and save '$file' at your own pace.  Ctrl+C to abort."
+
+    if command -v inotifywait >/dev/null 2>&1; then
+        while true; do
+            inotifywait -q -e close_write,modify "$file" >/dev/null 2>&1 || true
+            say ""
+            say "File saved — re-validating..."
+            if validate_config "$file"; then
+                return 0
+            fi
+            say ""
+            say "Fix the issues listed above, then save again."
+        done
+    else
+        # Polling fallback (inotify-tools not installed)
+        local last_mtime
+        last_mtime="$(stat -c %Y "$file" 2>/dev/null || echo 0)"
+        while true; do
+            sleep 2
+            local mtime
+            mtime="$(stat -c %Y "$file" 2>/dev/null || echo 0)"
+            if [ "$mtime" != "$last_mtime" ]; then
+                last_mtime="$mtime"
+                say ""
+                say "File saved — re-validating..."
+                if validate_config "$file"; then
+                    return 0
+                fi
+                say ""
+                say "Fix the issues listed above, then save again."
+            fi
+        done
+    fi
 }
 
-ask_global_config() {
-    say ""
-    ask_line "Output directory" OUTPUT_DIR "inception_pedagogical"
-    ask_line "Domain name (example: login.42.fr)" DOMAIN_NAME "mylogin.42.fr"
-}
+load_config() {
+    local file="$1"
 
-ask_service_config() {
-    if contains_service "mariadb"; then
-        say ""
-        say "MariaDB configuration"
-        ask_line "Database name" DB_NAME "wordpress"
-        ask_line "Database user" DB_USER "wpuser"
-        ask_secret "Database user password" DB_PASSWORD
-        ask_secret "Database root password" DB_ROOT_PASSWORD
-    fi
+    local login42
+    login42="$(conf_get login42 "$file")"
 
-    if contains_service "wordpress"; then
-        say ""
-        say "WordPress configuration"
-        ask_line "Site title" WP_TITLE "Inception MVP"
-        ask_line "Admin username" WP_ADMIN_USER "admin"
-        ask_secret "Admin password" WP_ADMIN_PASSWORD
-        ask_line "Admin email" WP_ADMIN_EMAIL "admin@${DOMAIN_NAME}"
-    fi
+    # Services
+    local raw_svc
+    raw_svc="$(conf_get services "$file" | tr ',' ' ' | tr '[:upper:]' '[:lower:]')"
+    SELECTED_SERVICES=()
+    local svc
+    for svc in $raw_svc; do
+        is_known_service "$svc" && add_service_if_missing "$svc" || true
+    done
 
-    if contains_service "redis"; then
-        say ""
-        say "Redis configuration"
-        ask_secret "Redis password" REDIS_PASSWORD
-    fi
+    # Project settings
+    OUTPUT_DIR="$(conf_get output_dir "$file")"
+    [ -z "$OUTPUT_DIR" ] && OUTPUT_DIR="${login42}_inception"
+    DOMAIN_NAME="$(conf_get domain "$file")"
+    [ -z "$DOMAIN_NAME" ] && DOMAIN_NAME="${login42}.42.fr"
 
-    if contains_service "ftp"; then
-        say ""
-        say "FTP configuration"
-        ask_line "FTP user" FTP_USER "ftpuser"
-        ask_secret "FTP password" FTP_PASSWORD
-    fi
+    # MariaDB
+    DB_NAME="$(conf_get db_name "$file")"
+    [ -z "$DB_NAME" ] && DB_NAME="wordpress"
+    DB_USER="$(conf_get db_user "$file")"
+    [ -z "$DB_USER" ] && DB_USER="wpuser"
+    DB_PASSWORD="$(conf_get db_password "$file")"
+    DB_ROOT_PASSWORD="$(conf_get db_root_password "$file")"
+
+    # WordPress
+    WP_TITLE="$(conf_get wp_title "$file")"
+    [ -z "$WP_TITLE" ] && WP_TITLE="Inception MVP"
+    WP_ADMIN_USER="$(conf_get wp_admin_user "$file")"
+    [ -z "$WP_ADMIN_USER" ] && WP_ADMIN_USER="admin"
+    WP_ADMIN_PASSWORD="$(conf_get wp_admin_password "$file")"
+    WP_ADMIN_EMAIL="$(conf_get wp_admin_email "$file")"
+    [ -z "$WP_ADMIN_EMAIL" ] && WP_ADMIN_EMAIL="admin@${DOMAIN_NAME}"
+
+    # Redis
+    REDIS_PASSWORD="$(conf_get redis_password "$file")"
+
+    # FTP
+    FTP_USER="$(conf_get ftp_user "$file")"
+    [ -z "$FTP_USER" ] && FTP_USER="ftpuser"
+    FTP_PASSWORD="$(conf_get ftp_password "$file")"
+
+    # Output control
+    local raw_overwrite
+    raw_overwrite="$(conf_get overwrite "$file" | tr '[:upper:]' '[:lower:]')"
+    [ "$raw_overwrite" = "true" ] && OVERWRITE="true" || OVERWRITE="false"
 }
 
 prepare_output_tree() {
     if [ -d "$OUTPUT_DIR" ]; then
-        say ""
-        printf "Directory '%s' exists. Overwrite it? [y/N]: " "$OUTPUT_DIR"
-        local answer=""
-        read -r answer
-        answer="${answer,,}"
-        if [ "$answer" = "y" ] || [ "$answer" = "yes" ]; then
+        if [ "${OVERWRITE}" = "true" ]; then
+            say "Overwriting existing directory: $OUTPUT_DIR"
             rm -rf "$OUTPUT_DIR"
         else
-            say "Aborted by user."
-            exit 0
+            say ""
+            say "Directory '$OUTPUT_DIR' already exists."
+            say "Set 'overwrite: true' in your config file to replace it, or change 'output_dir'."
+            exit 1
         fi
     fi
 
@@ -587,24 +658,48 @@ COMPOSE = docker compose -f srcs/docker-compose.yml --env-file srcs/.env
 
 .PHONY: build up down logs ps clean
 
+# ? 🔨 Builds the Docker images (creates data directories if needed)
 build:
 	@mkdir -p $(HOME)/data/wordpress $(HOME)/data/mariadb
 	$(COMPOSE) build
 
+# ? 🚀 Builds the Docker images and starts the containers in detached mode
 up: build
 	$(COMPOSE) up -d
 
+# ? 🧹 Stops and removes containers, networks, volumes, and images created by 'up'
 down:
 	$(COMPOSE) down
 
+# ? 📝 Follows container logs
 logs:
 	$(COMPOSE) logs -f
 
+# ? 🕒 Lists running containers
 ps:
 	$(COMPOSE) ps
 
+# ? 🧹 Stops and removes containers, networks, volumes, and images created by 'up'
 clean: down
 	$(COMPOSE) down --volumes --rmi all
+
+# ? 🔄 Stops and removes containers, networks, volumes, and images created by 'up'
+re: clean up
+
+# ? ❓ Displays this help message
+help:
+	@awk '\
+		BEGIN { blue = "\033[0;34m"; green = "\033[0;32m"; reset = "\033[0m"; yellow = "\033[0;33m"; print yellow "Usage: make [target]"; print "Targets:" } \
+		/^# \?/ { desc = substr($$0, 5); next } \
+		/^$$/ { desc = ""; next } \
+		/^[a-zA-Z0-9][a-zA-Z0-9_.-]*:/ { \
+			target = $$1; \
+			sub(/:.*/, "", target); \
+			if (target !~ /^\./) \
+				printf "  " blue "%-12s" reset green "%s" reset "\n", target, desc; \
+			desc = ""; \
+		}' $(firstword $(MAKEFILE_LIST))
+
 EOF
 }
 
@@ -686,13 +781,58 @@ EOF
     fi
 
     cat > "$dir/conf/default.conf" << EOF
-# Minimal TLS nginx config generated for learning.
+###############################################################
+# nginx TLS Configuration
+#
+# This server block terminates HTTPS on port 443 and routes
+# requests to the appropriate backend services.
+# Lines starting with "#" are nginx comments (ignored at runtime).
+###############################################################
+
 server {
+
+    ###############################################################
+    # listen 443 ssl
+    #
+    # Accept connections on port 443 with TLS enabled.
+    # TLS is mandatory for the Inception project subject.
+    #
+    # Fallback: 443
+    ###############################################################
     listen 443 ssl;
+
+    ###############################################################
+    # server_name
+    #
+    # Hostname(s) this block responds to.
+    # Must match the domain set in your inception.conf and
+    # the CN of the self-signed certificate.
+    #
+    # Fallback: localhost
+    ###############################################################
     server_name ${DOMAIN_NAME};
 
+    ###############################################################
+    # ssl_certificate / ssl_certificate_key
+    #
+    # Path to the TLS certificate and its private key.
+    # The entrypoint generates a self-signed pair at first start.
+    # Replace with a CA-signed certificate in production.
+    #
+    # Fallback: /etc/nginx/ssl/cert.pem  /etc/nginx/ssl/key.pem
+    ###############################################################
     ssl_certificate /etc/nginx/ssl/cert.pem;
     ssl_certificate_key /etc/nginx/ssl/key.pem;
+
+    ###############################################################
+    # ssl_protocols
+    #
+    # TLS protocol versions the server accepts.
+    # TLSv1.2 and TLSv1.3 are the only secure options today.
+    # Older versions (TLSv1, TLSv1.1) are broken and deprecated.
+    #
+    # Fallback: TLSv1.2 TLSv1.3
+    ###############################################################
     ssl_protocols TLSv1.2 TLSv1.3;
 
 ${root_location}
@@ -701,6 +841,13 @@ ${php_location}
 
 ${extra_locations}
 
+    ###############################################################
+    # location = /health
+    #
+    # Lightweight healthcheck endpoint.
+    # Returns HTTP 200 "ok" for Docker HEALTHCHECK or any
+    # monitoring tool — no upstream service is needed.
+    ###############################################################
     location = /health {
         return 200 'ok';
     }
@@ -709,10 +856,36 @@ EOF
 
     cat > "$dir/tools/entrypoint.sh" << 'EOF'
 #!/usr/bin/env sh
+# =============================================================
+# nginx entrypoint
+#
+# Runs once at container start, before nginx itself is launched.
+# Responsibilities:
+#   1. Generate a self-signed TLS certificate if none exists.
+#   2. Hand control to nginx in foreground mode.
+#
+# Learning goal:
+#   Understand why containers must not daemonise ("daemon off;")
+#   and how TLS certificates are usually managed at startup.
+# =============================================================
 set -eu
 
+# Create the directory that will hold the TLS certificate and key.
+# -p silently succeeds if the directory already exists.
 mkdir -p /etc/nginx/ssl
+
+# Only generate the certificate if it does not already exist.
+# Re-generating on every start would invalidate browser trust
+# on each container restart.
 if [ ! -f /etc/nginx/ssl/cert.pem ]; then
+  # -x509         self-signed certificate (no CA needed for MVP)
+  # -nodes        no passphrase on the private key (container cannot prompt)
+  # -days 365     validity period; increase for longer-lived environments
+  # -newkey rsa:2048  2048-bit RSA key (minimum recommended length)
+  # -subj         non-interactive subject; CN must match DOMAIN_NAME
+  #
+  # ${DOMAIN_NAME} is read from the container environment at runtime
+  # (injected via env_file in docker-compose.yml -> srcs/.env).
   openssl req -x509 -nodes -days 365 \
     -newkey rsa:2048 \
     -keyout /etc/nginx/ssl/key.pem \
@@ -720,6 +893,10 @@ if [ ! -f /etc/nginx/ssl/cert.pem ]; then
     -subj "/C=FR/ST=IDF/L=Paris/O=42/CN=${DOMAIN_NAME}"
 fi
 
+# exec replaces the shell process with nginx, making nginx PID 1.
+# PID 1 receives Docker stop/kill signals directly.
+# "daemon off;" prevents nginx from forking into the background,
+# which would exit the container since PID 1 would disappear.
 exec nginx -g "daemon off;"
 EOF
     chmod +x "$dir/tools/entrypoint.sh"
@@ -749,29 +926,103 @@ ENTRYPOINT ["/entrypoint.sh"]
 EOF
 
     cat > "$dir/conf/my.cnf" << 'EOF'
+###############################################################
+# MariaDB Server Configuration
+#
+# Loaded by mariadbd at startup.
+# Controls networking, socket path, and storage location.
+# Lines starting with "#" are ignored by MariaDB.
+# Omitted directives fall back to compiled defaults.
+###############################################################
+
 [mysqld]
+
+###############################################################
+# bind-address
+#
+# IP address the server listens on for TCP connections.
+#
+#   0.0.0.0   accept from any host — required inside Docker
+#             so other containers on the bridge can connect.
+#   127.0.0.1 loopback only — blocks all remote connections.
+#
+# Security: restrict to a specific internal IP in production.
+# Fallback: 127.0.0.1
+###############################################################
 bind-address=0.0.0.0
+
+###############################################################
+# port
+#
+# TCP port the server listens on.
+# All clients and docker-compose port mappings must match.
+# The conventional MariaDB/MySQL port is 3306.
+#
+# Fallback: 3306
+###############################################################
 port=3306
+
+###############################################################
+# socket
+#
+# Path to the Unix domain socket file.
+# Local processes (same container) connect via socket instead
+# of TCP — faster and unaffected by bind-address.
+# Used by the entrypoint healthcheck and mariadb-admin.
+#
+# Fallback: /tmp/mysql.sock
+###############################################################
 socket=/run/mysqld/mysqld.sock
 EOF
 
     cat > "$dir/tools/entrypoint.sh" << 'EOF'
 #!/usr/bin/env sh
+# =============================================================
+# MariaDB entrypoint
+#
+# Initialises the data directory on first run, creates the
+# application database and user, then starts the server.
+#
+# Learning goal:
+#   Follow the two-phase init pattern:
+#     1. First-run  - bootstrap with --skip-networking, configure,
+#                     then shut down cleanly.
+#     2. Normal run - start with full networking enabled.
+#   This is the same approach used by the official MariaDB image.
+# =============================================================
 set -eu
 
+# Ensure runtime directories exist with correct ownership.
+# /run/mysqld   is used for the Unix socket file.
+# /var/lib/mysql holds all database files.
 mkdir -p /run/mysqld /var/lib/mysql
 chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
+# The presence of /var/lib/mysql/mysql indicates that
+# mariadb-install-db has already run; skip init on subsequent starts.
 if [ ! -d /var/lib/mysql/mysql ]; then
+  # Seed the system tables (mysql, information_schema, etc.).
+  # --user=mysql   run as the restricted system user, not root.
+  # --datadir      explicit data directory (must match my.cnf socket path).
+  # >/dev/null     suppress verbose installation output.
   mariadb-install-db --user=mysql --datadir=/var/lib/mysql >/dev/null
 
+  # Start a temporary server with no TCP networking.
+  # The & backgrounds it; $! captures its PID for later shutdown.
+  # --skip-networking blocks all TCP clients during init.
   mariadbd --user=mysql --skip-networking --socket=/run/mysqld/mysqld.sock &
   pid="$!"
 
+  # Wait until the server is ready to accept socket connections.
+  # mariadb-admin ping exits 0 only when the server responds.
   until mariadb-admin --socket=/run/mysqld/mysqld.sock ping --silent >/dev/null 2>&1; do
     sleep 1
   done
 
+  # Bootstrap the application database, user, and root password.
+  # All values come from container environment variables (srcs/.env).
+  # \`${DB_NAME}\`  backtick-quoting handles names with special characters.
+  # '%'             allows connections from any host (required in Docker).
   mariadb --socket=/run/mysqld/mysqld.sock <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
 CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
@@ -780,10 +1031,15 @@ ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
 FLUSH PRIVILEGES;
 SQL
 
+  # Shut down the temporary server before the normal start below.
   mariadb-admin --socket=/run/mysqld/mysqld.sock -u root -p"${DB_ROOT_PASSWORD}" shutdown
   wait "$pid" 2>/dev/null || true
 fi
 
+# Start the production server.
+# exec replaces this shell so mariadbd becomes PID 1 and receives
+# Docker's SIGTERM directly for a clean shutdown.
+# --bind-address=0.0.0.0  listen on all interfaces (required for Docker).
 exec mariadbd --user=mysql --bind-address=0.0.0.0 --port=3306
 EOF
     chmod +x "$dir/tools/entrypoint.sh"
@@ -814,18 +1070,78 @@ CMD ["php-fpm"]
 EOF
 
     cat > "$dir/conf/php-overrides.ini" << 'EOF'
-; Minimal pedagogical PHP overrides
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; PHP Runtime Configuration Overrides
+;
+; Loaded by PHP-FPM after the main php.ini.
+; Only the directives listed here are overridden.
+; Lines starting with ";" are comments.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; memory_limit
+;
+; Maximum memory a single PHP process may use.
+;
+;   Integer followed by M (megabytes) or G (gigabytes).
+;   -1 means unlimited — unsafe in production.
+;
+; Note: WordPress plugins and media imports are memory-hungry.
+;       256M is a safe starting point for most installs.
+;
+; Fallback: 128M
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 memory_limit = 256M
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; upload_max_filesize
+;
+; Maximum size of a single uploaded file.
+;
+;   Must be <= post_max_size (see below).
+;   Increase to allow large theme or plugin uploads.
+;
+; Fallback: 2M
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 upload_max_filesize = 32M
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; post_max_size
+;
+; Maximum size of a complete HTTP POST request body.
+;
+;   Should be >= upload_max_filesize because a POST with a file
+;   also includes form fields and multipart boundaries.
+;
+; Fallback: 8M
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 post_max_size = 32M
 EOF
 
     cat > "$dir/tools/entrypoint.sh" << 'EOF'
 #!/usr/bin/env sh
+# =============================================================
+# WordPress entrypoint
+#
+# Thin wrapper around the official WordPress image entrypoint.
+# The official entrypoint handles:
+#   - wp-config.php generation from WORDPRESS_DB_* environment vars.
+#   - php-fpm startup (passed in via CMD ["php-fpm"]).
+#
+# Learning goal:
+#   Understand why the official image's entrypoint is reused here
+#   instead of being rewritten from scratch.
+#   You can read the original at:
+#   https://github.com/docker-library/wordpress/blob/master/docker-entrypoint.sh
+#
+#   To add custom setup steps (installing WP-CLI, activating a theme,
+#   importing a database dump, etc.) place them before the exec line.
+# =============================================================
 set -eu
 
-# Keep startup minimal: use official wordpress entrypoint behavior.
-# If DB env vars are present, wordpress image handles setup flow.
+# All WORDPRESS_* environment variables defined in srcs/.env are
+# automatically read by docker-entrypoint.sh to configure WordPress.
+# "$@" forwards the CMD arguments — typically "php-fpm".
 exec docker-entrypoint.sh "$@"
 EOF
     chmod +x "$dir/tools/entrypoint.sh"
@@ -852,19 +1168,81 @@ ENTRYPOINT ["/entrypoint.sh"]
 EOF
 
     cat > "$dir/conf/redis.conf" << 'EOF'
+###############################################################
+# Redis Configuration
+#
+# Loaded by redis-server at startup.
+# Lines starting with "#" are ignored.
+# Omitted directives fall back to Redis built-in defaults.
+###############################################################
+
+###############################################################
+# bind
+#
+# Network addresses Redis listens on.
+#
+#   0.0.0.0   accept from any host — needed inside Docker so
+#             WordPress on another container can reach Redis.
+#   127.0.0.1 loopback only — blocks all remote connections.
+#
+# Security: always combine 0.0.0.0 with a requirepass.
+# Fallback: 127.0.0.1 -::1
+###############################################################
 bind 0.0.0.0
+
+###############################################################
+# port
+#
+# TCP port Redis listens on.
+# Update docker-compose.yml ports mapping if you change this.
+#
+# Fallback: 6379
+###############################################################
 port 6379
+
+###############################################################
+# appendonly
+#
+# Enable Append Only File (AOF) persistence.
+#
+#   yes  every write is logged to appendonly.aof — data
+#        survives container restarts (recommended for WP cache).
+#   no   data lives in memory only; lost on restart.
+#
+# Fallback: no
+###############################################################
 appendonly yes
 EOF
 
     cat > "$dir/tools/entrypoint.sh" << 'EOF'
 #!/usr/bin/env sh
+# =============================================================
+# Redis entrypoint
+#
+# Starts the Redis server with optional password authentication.
+#
+# Learning goal:
+#   See how a runtime environment variable (REDIS_PASSWORD)
+#   controls a server feature at startup without baking the
+#   credential into the image or the redis.conf file.
+# =============================================================
 set -eu
 
+# If REDIS_PASSWORD is set and non-empty in the container env,
+# pass it to redis-server via the --requirepass flag at runtime.
+# This avoids storing the password in conf/redis.conf (the image layer).
+#
+# ${REDIS_PASSWORD:-}  the :- operator expands to an empty string when
+#                      the variable is unset, preventing a fatal error
+#                      under set -u.
 if [ -n "${REDIS_PASSWORD:-}" ]; then
+  # --requirepass overrides any requirepass line already in redis.conf.
   exec redis-server /usr/local/etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}"
 fi
 
+# No password configured - start without authentication.
+# Acceptable within an isolated Docker network; never expose
+# port 6379 to the public internet without a password.
 exec redis-server /usr/local/etc/redis/redis.conf
 EOF
     chmod +x "$dir/tools/entrypoint.sh"
@@ -894,26 +1272,150 @@ ENTRYPOINT ["/entrypoint.sh"]
 EOF
 
     cat > "$dir/conf/vsftpd.conf" << 'EOF'
+###############################################################
+# vsftpd Configuration
+#
+# Controls the behaviour of the vsftpd FTP server.
+# Lines starting with "#" are ignored.
+# Boolean options accept YES or NO.
+###############################################################
+
+###############################################################
+# listen
+#
+# Run vsftpd as a standalone daemon (not via inetd/xinetd).
+#
+#   YES  vsftpd owns its socket — required inside Docker.
+#   NO   expects a super-server to pass connections (unused).
+#
+# Fallback: YES
+###############################################################
 listen=YES
+
+###############################################################
+# anonymous_enable
+#
+# Allow connections without a username or password.
+#
+#   YES  anyone can connect — almost never desirable.
+#   NO   only authenticated local users can log in.
+#
+# Security: keep this NO.
+# Fallback: NO
+###############################################################
 anonymous_enable=NO
+
+###############################################################
+# local_enable
+#
+# Allow Linux system users to authenticate over FTP.
+#
+#   YES  accounts created with adduser can log in.
+#   NO   no one can log in when anonymous_enable is also NO.
+#
+# Fallback: YES
+###############################################################
 local_enable=YES
+
+###############################################################
+# write_enable
+#
+# Permit file uploads and directory creation.
+#
+#   YES  clients can upload — required for WordPress file sync.
+#   NO   read-only FTP access.
+#
+# Fallback: YES
+###############################################################
 write_enable=YES
+
+###############################################################
+# chroot_local_user
+#
+# Jail each user inside their home directory after login.
+#
+#   YES  the user cannot navigate above their home directory.
+#   NO   full filesystem traversal (dangerous).
+#
+# Security: keep this YES.
+# Fallback: YES
+###############################################################
 chroot_local_user=YES
+
+###############################################################
+# allow_writeable_chroot
+#
+# Permit write access when the chroot root is itself writable.
+#
+#   YES  required when home dir is owned by the FTP user;
+#        avoids "500 OOPS: writable root inside chroot".
+#   NO   vsftpd refuses to start if chroot dir is writable.
+#
+# Fallback: YES
+###############################################################
 allow_writeable_chroot=YES
+
+###############################################################
+# pasv_enable
+#
+# Enable PASSIVE mode data transfers.
+#
+#   YES  the client opens the data connection — recommended
+#        behind NAT/Docker where the server IP is unreachable.
+#   NO   ACTIVE mode; the server connects back to the client
+#        (fails behind Docker NAT).
+#
+# Fallback: YES
+###############################################################
 pasv_enable=YES
+
+###############################################################
+# pasv_min_port / pasv_max_port
+#
+# Port range for PASSIVE mode data connections.
+# This entire range must be published in docker-compose:
+#   ports: "21100-21110:21100-21110"
+#
+# Choose a narrow range to limit Docker port exposure.
+# Fallback: 21100 / 21110
+###############################################################
 pasv_min_port=21100
 pasv_max_port=21110
 EOF
 
     cat > "$dir/tools/entrypoint.sh" << 'EOF'
 #!/usr/bin/env sh
+# =============================================================
+# FTP (vsftpd) entrypoint
+#
+# Creates the FTP user account on first run, then starts vsftpd.
+#
+# Learning goal:
+#   Understand how Linux user accounts are managed inside Alpine
+#   containers (adduser instead of useradd) and why chpasswd is
+#   used to set a password non-interactively.
+# =============================================================
 set -eu
 
+# Create the FTP user only if the account does not already exist.
+# This is idempotent: restarting the container will not fail even
+# if the volume already contains the user's home directory.
+#
+# id "${FTP_USER}"  checks whether the user exists (exit 0 = exists).
 if ! id "${FTP_USER}" >/dev/null 2>&1; then
+  # adduser -D   create the user without setting a password
+  #              (-D skips the interactive password prompt).
+  # -h           set the home directory; vsftpd uses this as the
+  #              chroot root (see chroot_local_user in vsftpd.conf).
   adduser -D -h /home/"${FTP_USER}" "${FTP_USER}"
+
+  # Set the password non-interactively via stdin.
+  # Format expected by chpasswd: "username:password"
   echo "${FTP_USER}:${FTP_PASSWORD}" | chpasswd
 fi
 
+# exec replaces this shell with vsftpd so it becomes PID 1
+# and receives Docker's SIGTERM directly for a clean shutdown.
 exec /usr/sbin/vsftpd /etc/vsftpd/vsftpd.conf
 EOF
     chmod +x "$dir/tools/entrypoint.sh"
@@ -969,14 +1471,67 @@ CMD ["nginx", "-g", "daemon off;"]
 EOF
 
     cat > "$dir/conf/default.conf" << 'EOF'
+###############################################################
+# nginx Static Site Configuration
+#
+# Serves a plain directory of HTML/CSS/JS files over HTTP.
+# Lines starting with "#" are nginx comments (ignored at runtime).
+###############################################################
+
 server {
+
+  ###############################################################
+  # listen
+  #
+  # Port this server block listens on.
+  # 80 is plain HTTP, suitable for an internal bonus service
+  # that sits behind the main nginx TLS reverse proxy.
+  #
+  # Fallback: 80
+  ###############################################################
   listen 80;
+
+  ###############################################################
+  # server_name
+  #
+  # Hostname(s) matched by this block.
+  # _  is a catch-all — matches any Host header value.
+  # Use a real hostname if you run multiple server blocks.
+  #
+  # Fallback: _
+  ###############################################################
   server_name _;
 
+  ###############################################################
+  # root
+  #
+  # Filesystem directory served to clients.
+  # Place your index.html and assets inside this directory.
+  #
+  # Fallback: /var/www/localhost/htdocs
+  ###############################################################
   root /var/www/localhost/htdocs;
+
+  ###############################################################
+  # index
+  #
+  # Default file returned when a directory is requested.
+  #
+  # Fallback: index.html
+  ###############################################################
   index index.html;
 
   location / {
+    ###############################################################
+    # try_files
+    #
+    # Resolution order for incoming requests:
+    #   $uri     exact file path
+    #   $uri/    directory (nginx looks for index inside)
+    #   =404     return 404 if neither matched
+    #
+    # Fallback: try_files $uri $uri/ =404;
+    ###############################################################
     try_files $uri $uri/ =404;
   }
 }
@@ -1013,12 +1568,33 @@ print_summary() {
 }
 
 main() {
-    print_title
-    choose_services
-    ask_global_config
-    ask_service_config
-    resolve_images
+    local config_file="${1:-inception.conf}"
 
+    print_title
+
+    if [ ! -f "$config_file" ]; then
+        say ""
+        say "Creating configuration template: $config_file"
+        say "Open it in your editor, fill in the fields, and save."
+        say ""
+        create_config_template "$config_file"
+    else
+        say ""
+        say "Using existing configuration: $config_file"
+    fi
+
+    watch_and_validate "$config_file"
+
+    say ""
+    say "Configuration accepted. Loading..."
+    load_config "$config_file"
+
+    say ""
+    say "  Services : ${SELECTED_SERVICES[*]}"
+    say "  Directory: $OUTPUT_DIR"
+    say "  Domain   : $DOMAIN_NAME"
+
+    resolve_images
     prepare_output_tree
 
     generate_root_readme
