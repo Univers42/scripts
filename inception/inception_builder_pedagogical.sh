@@ -25,12 +25,15 @@ WP_TITLE=""
 WP_ADMIN_USER=""
 WP_ADMIN_PASSWORD=""
 WP_ADMIN_EMAIL=""
+WP_IMAGE_TAG=""
 
 REDIS_PASSWORD=""
 FTP_USER=""
 FTP_PASSWORD=""
 
 OVERWRITE="false"
+FAST_MODE="false"
+RESOLVE_TAGS="false"
 
 # Resolved image references
 IMG_ALPINE_BASE=""
@@ -100,6 +103,16 @@ error() {
 
 section() {
     printf '\n%b▶ %s%b\n' "$BOLD$BLUE" "$1" "$RESET"
+}
+
+parse_bool() {
+    # Normalize common boolean spellings from config values.
+    local raw="${1:-}"
+    raw="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]' | xargs)"
+    case "$raw" in
+        1|true|yes|y|on) printf 'true' ;;
+        *) printf 'false' ;;
+    esac
 }
 
 conf_get() {
@@ -189,6 +202,24 @@ domain:                    # defaults to <login42>.42.fr
 # Fallback: false
 overwrite: false
 
+# --- Build speed profile ---
+# fast_mode: when true, speed up generation/build workflow by:
+#   - skipping Docker Hub live tag discovery (uses pinned fallback tags)
+#   - generating a faster Makefile workflow (parallel BuildKit build,
+#     and 'make up' without forcing a rebuild every time)
+# Fallback: false
+fast_mode: false
+
+# resolve_tags: when true, query Docker Hub for the latest stable tags.
+# when false, use pinned fallback tags instantly (faster, offline-friendly).
+# If omitted:
+#   - defaults to false when fast_mode=true
+#   - defaults to true when fast_mode=false
+# Examples:
+#   fast_mode: true
+#   resolve_tags: true   # keep fast Makefile but still resolve tags
+resolve_tags: false
+
 # === MariaDB (required when 'mariadb' is in services) ===
 db_name: wordpress
 db_user: wpuser
@@ -199,7 +230,12 @@ db_root_password: CHANGE_ME
 wp_title: My Inception Site
 wp_admin_user: admin
 wp_admin_password: CHANGE_ME
-wp_admin_email: CHANGE_ME  # e.g. admin@johndoe.42.fr
+# leave blank to auto-generate: <login42>@student.42madrid.com
+wp_admin_email:
+# Optional: force a specific WordPress tag (recommended if your network
+# has trouble with newly published tags).
+# Example: php8.4-fpm-alpine
+wp_image_tag:
 
 # === Redis (required when 'redis' is in services) ===
 redis_password: CHANGE_ME
@@ -240,26 +276,56 @@ pick_stable_alpine_tag() {
 
 resolve_images() {
     section "Resolving Docker Images"
-    info "Fetching Alpine-oriented tags from Docker Hub when available."
+    if [ "$RESOLVE_TAGS" = "true" ]; then
+        info "Fetching Alpine-oriented tags from Docker Hub when available."
+    else
+        warn "Tag resolution disabled: using pinned fallback tags."
+    fi
 
     local alpine_tag
-    alpine_tag="$(pick_stable_alpine_tag "alpine" '^[0-9]+\.[0-9]+\.[0-9]+$|^[0-9]+\.[0-9]+$' '3.21')"
+    if [ "$RESOLVE_TAGS" = "true" ]; then
+        alpine_tag="$(pick_stable_alpine_tag "alpine" '^[0-9]+\.[0-9]+\.[0-9]+$|^[0-9]+\.[0-9]+$' '3.21')"
+    else
+        alpine_tag='3.21'
+    fi
     IMG_ALPINE_BASE="alpine:${alpine_tag}"
 
     local nginx_tag
-    nginx_tag="$(pick_stable_alpine_tag "nginx" '^stable-alpine$|^[0-9]+(\.[0-9]+){0,2}-alpine$' 'stable-alpine')"
+    if [ "$RESOLVE_TAGS" = "true" ]; then
+        nginx_tag="$(pick_stable_alpine_tag "nginx" '^stable-alpine$|^[0-9]+(\.[0-9]+){0,2}-alpine$' 'stable-alpine')"
+    else
+        nginx_tag='stable-alpine'
+    fi
     IMG_NGINX="nginx:${nginx_tag}"
 
     local wp_tag
-    wp_tag="$(pick_stable_alpine_tag "wordpress" '.*fpm.*alpine.*' 'php8.2-fpm-alpine')"
+    if [ -n "$WP_IMAGE_TAG" ]; then
+        wp_tag="$WP_IMAGE_TAG"
+        info "Using configured WordPress tag override: wordpress:${wp_tag}"
+    elif [ "$RESOLVE_TAGS" = "true" ]; then
+        # Keep WordPress on conservative, broadly available Alpine tags.
+        # Avoid immediately adopting very new minor tags that may be flaky
+        # on some mirrors/networks right after release.
+        wp_tag="$(pick_stable_alpine_tag "wordpress" '^php8\.(2|3|4)-fpm-alpine$' 'php8.4-fpm-alpine')"
+    else
+        wp_tag='php8.4-fpm-alpine'
+    fi
     IMG_WORDPRESS="wordpress:${wp_tag}"
 
     local redis_tag
-    redis_tag="$(pick_stable_alpine_tag "redis" '^[0-9]+(\.[0-9]+){0,2}-alpine$|^alpine$' '7-alpine')"
+    if [ "$RESOLVE_TAGS" = "true" ]; then
+        redis_tag="$(pick_stable_alpine_tag "redis" '^[0-9]+(\.[0-9]+){0,2}-alpine$|^alpine$' '7-alpine')"
+    else
+        redis_tag='7-alpine'
+    fi
     IMG_REDIS="redis:${redis_tag}"
 
     local adminer_tag
-    adminer_tag="$(pick_stable_alpine_tag "adminer" '.*alpine.*|.*standalone.*' 'standalone')"
+    if [ "$RESOLVE_TAGS" = "true" ]; then
+        adminer_tag="$(pick_stable_alpine_tag "adminer" '.*alpine.*|.*standalone.*' 'standalone')"
+    else
+        adminer_tag='standalone'
+    fi
     IMG_ADMINER="adminer:${adminer_tag}"
 
     IMG_MARIADB_BASE="$IMG_ALPINE_BASE"
@@ -314,13 +380,19 @@ validate_config() {
     fi
 
     if printf '%s\n' $svc_list | grep -qx 'wordpress'; then
-        for field in wp_admin_password wp_admin_email; do
+        for field in wp_admin_password; do
             val="$(conf_get "$field" "$file")"
             if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
                 error "missing: $field (required by wordpress)"
                 errors=$(( errors + 1 ))
             fi
         done
+
+        val="$(conf_get wp_admin_email "$file")"
+        if [ "$val" = "CHANGE_ME" ]; then
+            error "invalid: wp_admin_email cannot be CHANGE_ME (leave blank for auto default or set an email)"
+            errors=$(( errors + 1 ))
+        fi
     fi
 
     if printf '%s\n' $svc_list | grep -qx 'redis'; then
@@ -421,7 +493,8 @@ load_config() {
     [ -z "$WP_ADMIN_USER" ] && WP_ADMIN_USER="admin"
     WP_ADMIN_PASSWORD="$(conf_get wp_admin_password "$file")"
     WP_ADMIN_EMAIL="$(conf_get wp_admin_email "$file")"
-    [ -z "$WP_ADMIN_EMAIL" ] && WP_ADMIN_EMAIL="admin@${DOMAIN_NAME}"
+    [ -z "$WP_ADMIN_EMAIL" ] && WP_ADMIN_EMAIL="${login42}@student.42madrid.com"
+    WP_IMAGE_TAG="$(conf_get wp_image_tag "$file")"
 
     # Redis
     REDIS_PASSWORD="$(conf_get redis_password "$file")"
@@ -433,8 +506,27 @@ load_config() {
 
     # Output control
     local raw_overwrite
-    raw_overwrite="$(conf_get overwrite "$file" | tr '[:upper:]' '[:lower:]')"
-    [ "$raw_overwrite" = "true" ] && OVERWRITE="true" || OVERWRITE="false"
+    raw_overwrite="$(conf_get overwrite "$file")"
+    OVERWRITE="$(parse_bool "$raw_overwrite")"
+
+    # Fast mode profile
+    local raw_fast_mode
+    raw_fast_mode="$(conf_get fast_mode "$file")"
+    FAST_MODE="$(parse_bool "$raw_fast_mode")"
+
+    # Tag resolution profile.
+    # Explicit resolve_tags overrides fast_mode defaults.
+    local raw_resolve_tags
+    raw_resolve_tags="$(conf_get resolve_tags "$file")"
+    if [ -n "$raw_resolve_tags" ]; then
+        RESOLVE_TAGS="$(parse_bool "$raw_resolve_tags")"
+    else
+        if [ "$FAST_MODE" = "true" ]; then
+            RESOLVE_TAGS="false"
+        else
+            RESOLVE_TAGS="true"
+        fi
+    fi
 }
 
 prepare_output_tree() {
@@ -739,40 +831,68 @@ generate_makefile() {
     cat > "$OUTPUT_DIR/Makefile" << 'EOF'
 # Basic Makefile for generated project.
 COMPOSE = docker compose -f srcs/docker-compose.yml --env-file srcs/.env
+BUILDKIT = DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1
+.RECIPEPREFIX := >
 
 .PHONY: build up down logs ps clean
 
 # ? 🔨 Builds the Docker images (creates data directories if needed)
 build:
-	@mkdir -p $(HOME)/data/wordpress $(HOME)/data/mariadb
-	$(COMPOSE) build
+>@mkdir -p $(HOME)/data/wordpress $(HOME)/data/mariadb
+>$(BUILDKIT) $(COMPOSE) build --parallel
+
+# ? 🔄 Builds images and then starts containers (explicit rebuild path)
+up-build: build
+>$(COMPOSE) up -d
+
+EOF
+
+    if [ "$FAST_MODE" = "true" ]; then
+        cat >> "$OUTPUT_DIR/Makefile" << 'EOF'
+
+# ? 🚀 Fast mode: starts containers without forcing a rebuild each time
+up:
+>$(COMPOSE) up -d
+
+EOF
+    else
+        cat >> "$OUTPUT_DIR/Makefile" << 'EOF'
 
 # ? 🚀 Builds the Docker images and starts the containers in detached mode
 up: build
-	$(COMPOSE) up -d
+>$(COMPOSE) up -d
+
+EOF
+    fi
+
+    cat >> "$OUTPUT_DIR/Makefile" << 'EOF'
 
 # ? 🧹 Stops and removes containers, networks, volumes, and images created by 'up'
 down:
-	$(COMPOSE) down
+>$(COMPOSE) down
 
 # ? 📝 Follows container logs
 logs:
-	$(COMPOSE) logs -f
+>$(COMPOSE) logs -f
 
 # ? 🕒 Lists running containers
 ps:
-	$(COMPOSE) ps
+>$(COMPOSE) ps
+
+# ? 📷 Lists docker images
+images:
+>$(COMPOSE) images
 
 # ? 🧹 Stops and removes containers, networks, volumes, and images created by 'up'
 clean: down
-	$(COMPOSE) down --volumes --rmi all
+>$(COMPOSE) down --volumes --rmi all
 
 # ? 🔄 Stops and removes containers, networks, volumes, and images created by 'up'
 re: clean up
 
 # ? ❓ Displays this help message
 help:
-	@awk '\
+>@awk '\
 		BEGIN { blue = "\033[0;34m"; green = "\033[0;32m"; reset = "\033[0m"; yellow = "\033[0;33m"; print yellow "Usage: make [target]"; print "Targets:" } \
 		/^# \?/ { desc = substr($$0, 5); next } \
 		/^$$/ { desc = ""; next } \
@@ -1755,6 +1875,8 @@ main() {
     info "Services  : ${SELECTED_SERVICES[*]}"
     info "Directory : $OUTPUT_DIR"
     info "Domain    : $DOMAIN_NAME"
+    info "Fast mode : $FAST_MODE"
+    info "Resolve tags : $RESOLVE_TAGS"
 
     resolve_images
     prepare_output_tree
