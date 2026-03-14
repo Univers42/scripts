@@ -42,16 +42,64 @@ IMG_MARIADB_BASE=""
 IMG_FTP_BASE=""
 IMG_STATIC_BASE=""
 
+BLUE=""
+CYAN=""
+GREEN=""
+YELLOW=""
+RED=""
+BOLD=""
+RESET=""
+
+init_ui() {
+    if [ -t 1 ]; then
+        BLUE='\033[0;34m'
+        CYAN='\033[0;36m'
+        GREEN='\033[0;32m'
+        YELLOW='\033[0;33m'
+        RED='\033[0;31m'
+        BOLD='\033[1m'
+        RESET='\033[0m'
+    fi
+}
+
 print_title() {
+    printf '\n%b' "$BLUE"
     cat << 'EOF'
-=============================================================
- Inception 42 - Pedagogical Builder (MVP)
-=============================================================
+╔═════════════════════════════════════════════════════╗
+║   ___ _   _  ____ _____ ____ _____ ___ ___  _   _   ║
+║  |_ _| \ | |/ ___| ____|  _ \_   _|_ _/ _ \| \ | |  ║
+║   | ||  \| | |   |  _| | |_) || |  | | | | |  \| |  ║
+║   | || |\  | |___| |___|  __/ | |  | | |_| | |\  |  ║
+║  |___|_| \_|\____|_____|_|    |_| |___\___/|_| \_|  ║
+║                                                     ║
+║      Inception 42 - Pedagogical Builder Watchdog    ║
+╚═════════════════════════════════════════════════════╝
 EOF
+    printf '%b' "$RESET"
 }
 
 say() {
     printf '%s\n' "$1"
+}
+
+info() {
+    printf '%bℹ%b %s\n' "$CYAN" "$RESET" "$1"
+}
+
+success() {
+    printf '%b✔%b %s\n' "$GREEN" "$RESET" "$1"
+}
+
+warn() {
+    printf '%b⚠%b %s\n' "$YELLOW" "$RESET" "$1"
+}
+
+error() {
+    printf '%b✖%b %s\n' "$RED" "$RESET" "$1"
+}
+
+section() {
+    printf '\n%b▶ %s%b\n' "$BOLD$BLUE" "$1" "$RESET"
 }
 
 conf_get() {
@@ -191,8 +239,8 @@ pick_stable_alpine_tag() {
 }
 
 resolve_images() {
-    say ""
-    say "Resolving Docker Hub Alpine-stable tags (best effort)..."
+    section "Resolving Docker Images"
+    info "Fetching Alpine-oriented tags from Docker Hub when available."
 
     local alpine_tag
     alpine_tag="$(pick_stable_alpine_tag "alpine" '^[0-9]+\.[0-9]+\.[0-9]+$|^[0-9]+\.[0-9]+$' '3.21')"
@@ -218,11 +266,11 @@ resolve_images() {
     IMG_FTP_BASE="$IMG_ALPINE_BASE"
     IMG_STATIC_BASE="$IMG_ALPINE_BASE"
 
-    say "- nginx    -> $IMG_NGINX"
-    say "- wordpress-> $IMG_WORDPRESS"
-    say "- redis    -> $IMG_REDIS"
-    say "- adminer  -> $IMG_ADMINER"
-    say "- alpine   -> $IMG_ALPINE_BASE (for mariadb/ftp/static)"
+    success "nginx     -> $IMG_NGINX"
+    success "wordpress -> $IMG_WORDPRESS"
+    success "redis     -> $IMG_REDIS"
+    success "adminer   -> $IMG_ADMINER"
+    success "alpine    -> $IMG_ALPINE_BASE (for mariadb/ftp/static/custom)"
 }
 
 validate_config() {
@@ -232,14 +280,14 @@ validate_config() {
     local login42
     login42="$(conf_get login42 "$file")"
     if [ -z "$login42" ] || [ "$login42" = "YOUR_LOGIN" ]; then
-        say "  [missing] login42"
+        error "missing: login42"
         errors=$(( errors + 1 ))
     fi
 
     local raw_svc
     raw_svc="$(conf_get services "$file")"
     if [ -z "$raw_svc" ]; then
-        say "  [missing] services"
+        error "missing: services"
         return 1
     fi
 
@@ -249,7 +297,7 @@ validate_config() {
     local svc
     for svc in $svc_list; do
         if ! is_valid_service_name "$svc"; then
-            say "  [invalid] service '$svc'  (allowed: lowercase letters, digits, '-' and '_')"
+            error "invalid service '$svc' (allowed: lowercase letters, digits, '-' and '_')"
             errors=$(( errors + 1 ))
         fi
     done
@@ -259,7 +307,7 @@ validate_config() {
         for field in db_password db_root_password; do
             val="$(conf_get "$field" "$file")"
             if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
-                say "  [missing] $field  (required by mariadb)"
+                error "missing: $field (required by mariadb)"
                 errors=$(( errors + 1 ))
             fi
         done
@@ -269,7 +317,7 @@ validate_config() {
         for field in wp_admin_password wp_admin_email; do
             val="$(conf_get "$field" "$file")"
             if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
-                say "  [missing] $field  (required by wordpress)"
+                error "missing: $field (required by wordpress)"
                 errors=$(( errors + 1 ))
             fi
         done
@@ -278,7 +326,7 @@ validate_config() {
     if printf '%s\n' $svc_list | grep -qx 'redis'; then
         val="$(conf_get redis_password "$file")"
         if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
-            say "  [missing] redis_password  (required by redis)"
+            error "missing: redis_password (required by redis)"
             errors=$(( errors + 1 ))
         fi
     fi
@@ -286,7 +334,7 @@ validate_config() {
     if printf '%s\n' $svc_list | grep -qx 'ftp'; then
         val="$(conf_get ftp_password "$file")"
         if [ -z "$val" ] || [ "$val" = "CHANGE_ME" ]; then
-            say "  [missing] ftp_password  (required by ftp)"
+            error "missing: ftp_password (required by ftp)"
             errors=$(( errors + 1 ))
         fi
     fi
@@ -297,25 +345,24 @@ validate_config() {
 watch_and_validate() {
     local file="$1"
 
-    say ""
-    say "Validating $file..."
+    section "Configuration Watchdog"
+    info "Validating $file"
     if validate_config "$file"; then
+        success "Configuration is already complete."
         return 0
     fi
 
-    say ""
-    say "Edit and save '$file' at your own pace.  Ctrl+C to abort."
+    warn "Edit and save '$file' at your own pace. Press Ctrl+C to abort."
 
     if command -v inotifywait >/dev/null 2>&1; then
         while true; do
             inotifywait -q -e close_write,modify "$file" >/dev/null 2>&1 || true
-            say ""
-            say "File saved — re-validating..."
+            info "File saved. Re-validating..."
             if validate_config "$file"; then
+                success "Configuration completed."
                 return 0
             fi
-            say ""
-            say "Fix the issues listed above, then save again."
+            warn "Fix the issues listed above, then save again."
         done
     else
         # Polling fallback (inotify-tools not installed)
@@ -327,13 +374,12 @@ watch_and_validate() {
             mtime="$(stat -c %Y "$file" 2>/dev/null || echo 0)"
             if [ "$mtime" != "$last_mtime" ]; then
                 last_mtime="$mtime"
-                say ""
-                say "File saved — re-validating..."
+                info "File saved. Re-validating..."
                 if validate_config "$file"; then
+                    success "Configuration completed."
                     return 0
                 fi
-                say ""
-                say "Fix the issues listed above, then save again."
+                warn "Fix the issues listed above, then save again."
             fi
         done
     fi
@@ -394,18 +440,18 @@ load_config() {
 prepare_output_tree() {
     if [ -d "$OUTPUT_DIR" ]; then
         if [ "${OVERWRITE}" = "true" ]; then
-            say "Overwriting existing directory: $OUTPUT_DIR"
+            warn "Overwriting existing directory: $OUTPUT_DIR"
             rm -rf "$OUTPUT_DIR"
         else
-            say ""
-            printf "Directory '%s' already exists. Replace it? [y/N]: " "$OUTPUT_DIR"
+            printf '\n%b?%b Directory %s already exists. Replace it? [y/N]: ' "$YELLOW" "$RESET" "$OUTPUT_DIR"
             local answer=""
             read -r answer
             answer="$(printf '%s' "$answer" | tr '[:upper:]' '[:lower:]' | xargs)"
             if [ "$answer" = "y" ] || [ "$answer" = "yes" ]; then
+                warn "Replacing existing directory: $OUTPUT_DIR"
                 rm -rf "$OUTPUT_DIR"
             else
-                say "Aborted by user."
+                error "Aborted by user."
                 exit 1
             fi
         fi
@@ -1675,43 +1721,40 @@ generate_custom_services() {
 }
 
 print_summary() {
-    say ""
-    say "Generation complete."
-    say "Project folder: $OUTPUT_DIR"
-    say "Selected services: ${SELECTED_SERVICES[*]}"
-    say ""
-    say "Next steps:"
-    say "1) cd $OUTPUT_DIR"
-    say "2) make up"
-    say "3) inspect generated comments and customize each service"
+    section "Generation Complete"
+    success "Project folder: $OUTPUT_DIR"
+    info "Selected services: ${SELECTED_SERVICES[*]}"
+    printf '\n%bNext steps%b\n' "$BOLD" "$RESET"
+    say "  1. cd $OUTPUT_DIR"
+    say "  2. make up"
+    say "  3. inspect generated comments and customize each service"
 }
 
 main() {
     local config_file="${1:-inception.conf}"
 
+    init_ui
     print_title
 
     if [ ! -f "$config_file" ]; then
-        say ""
-        say "Creating configuration template: $config_file"
-        say "Open it in your editor, fill in the fields, and save."
-        say ""
+        section "Configuration Setup"
+        info "Creating configuration template: $config_file"
+        warn "Open it in your editor, fill in the fields, and save."
         create_config_template "$config_file"
     else
-        say ""
-        say "Using existing configuration: $config_file"
+        section "Configuration Setup"
+        info "Using existing configuration: $config_file"
     fi
 
     watch_and_validate "$config_file"
 
-    say ""
-    say "Configuration accepted. Loading..."
+    section "Loading Configuration"
+    success "Configuration accepted."
     load_config "$config_file"
 
-    say ""
-    say "  Services : ${SELECTED_SERVICES[*]}"
-    say "  Directory: $OUTPUT_DIR"
-    say "  Domain   : $DOMAIN_NAME"
+    info "Services  : ${SELECTED_SERVICES[*]}"
+    info "Directory : $OUTPUT_DIR"
+    info "Domain    : $DOMAIN_NAME"
 
     resolve_images
     prepare_output_tree
