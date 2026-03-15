@@ -313,6 +313,7 @@ resolve_images() {
         wp_tag='latest'
     fi
     IMG_WORDPRESS="wordpress:${wp_tag}"
+    IMG_WORDPRESS="wordpress:php8.5-fpm-alpine" # Force fpm for pedagogical reasons, to show how to customize the base image.
 
     local redis_tag
     if [ "$RESOLVE_TAGS" = "true" ]; then
