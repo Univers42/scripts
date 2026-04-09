@@ -111,6 +111,18 @@ else
 	log_warn "Trailing whitespace detected in staged changes (run: git diff --cached --check)"
 fi
 
+# ── 6. validate-all.sh (syntax + compose + secrets) ───
+VALIDATE_SCRIPT="$(git rev-parse --show-toplevel)/scripts/validate-all.sh"
+if [ -f "$VALIDATE_SCRIPT" ]; then
+	log_debug "Running scripts/validate-all.sh…"
+	if ! bash "$VALIDATE_SCRIPT"; then
+		log_error "scripts/validate-all.sh failed"
+		ERRORS=$((ERRORS + 1))
+	fi
+else
+	log_warn "scripts/validate-all.sh not found — skipping"
+fi
+
 # ── Summary ────────────────────────────────────────────
 if [ "$ERRORS" -gt 0 ]; then
 	log_error "pre-commit: $ERRORS issue(s) found — commit blocked."
