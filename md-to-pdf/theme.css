@@ -44,15 +44,13 @@
   --danger:           #ff3b30;       /* Errors, destructive                    */
 
   /* ── Typography ────────────────────────────────────────────────────────── */
-  --font-body:        -apple-system, BlinkMacSystemFont, "SF Pro Text",
-                      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display:     -apple-system, BlinkMacSystemFont, "SF Pro Display",
-                      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-body:        "Calibri", "Carlito", Arial, sans-serif;
+  --font-display:     "Calibri", "Carlito", Arial, sans-serif;
   --font-mono:        "SF Mono", "Fira Code", "Cascadia Code", Consolas,
                       "Liberation Mono", Menlo, monospace;
 
-  --body-size:        10pt;
-  --body-leading:     1.72;
+  --body-size:        12pt;
+  --body-leading:     1.32;
   --body-weight:      400;
   --bold-weight:      600;
   --h1-size:          24pt;
@@ -64,12 +62,13 @@
   --h4-size:          11pt;
   --h4-weight:        600;
   --code-size:        0.84em;
-  --small-size:       8.5pt;
-  --caption-size:     8pt;
+  --small-size:       10.5pt;
+  --caption-size:     10pt;
 
   /* ── Spacing scale (4px base) ──────────────────────────────────────────── */
   --sp-1:             4px;
   --sp-2:             8px;
+  --sp-2-5:           10px;
   --sp-3:             12px;
   --sp-4:             16px;
   --sp-5:             20px;
@@ -91,19 +90,48 @@
   --page-margin-h:    22mm;
 
   /* ── Code blocks ───────────────────────────────────────────────────────── */
-  --code-bg:          #1d1d1f;
-  --code-fg:          #e5e5ea;
+    --code-bg:          #f2f4f8;
+    --code-fg:          #24292f;
+    --code-border:      #d8dee9;
+    --code-line-fg:     #6b7280;
   --code-inline-bg:   var(--surface);
   --code-inline-fg:   var(--accent-warm);
   --code-radius:      var(--radius-lg);
   --code-padding:     var(--sp-4) var(--sp-5);
+
+    /* Syntax tokens used by Python-Markdown CodeHilite / Pygments.
+      Override these variables to reskin every language consistently. */
+    --code-token-comment:      #6a737d; /* slate   — comments, doc-strings      */
+    --code-token-keyword:      #7c3aed; /* violet  — if/for/const/def/import     */
+    --code-token-operator:     #0550ae; /* blue    — = + - * / && || …           */
+    --code-token-string:       #0a7f42; /* green   — "…" '…' `…`                */
+    --code-token-number:       #b45309; /* amber   — 42 3.14 0xff                */
+    --code-token-name:         #24292f; /* ink     — plain identifiers           */
+    --code-token-function:     #8250df; /* purple  — function/method definitions */
+    --code-token-method:       #0969da; /* blue    — attribute access / calls    */
+    --code-token-class:        #953800; /* brown   — class names                 */
+    --code-token-variable:     #b5367a; /* pink    — variable instances          */
+    --code-token-constant:     #0550ae; /* blue    — ALL_CAPS / true/false/None  */
+    --code-token-attribute:    #116329; /* dark-gr — HTML/XML attribute keys     */
+    --code-token-tag:          #116329; /* dark-gr — HTML/XML tag names          */
+    --code-token-builtin:      #0969da; /* blue    — len/print/require           */
+    --code-token-type:         #953800; /* brown   — type annotations / generics */
+    --code-token-punctuation:  #57606a; /* gray    — , ; : generic               */
+    --code-token-brace:        #cb6820; /* orange  — { }  object/block delimiters*/
+    --code-token-bracket:      #1a7fd4; /* blue    — [ ]  array/index delimiters */
+    --code-token-paren:        #57606a; /* gray    — ( )  call/group (subtle)    */
+    --code-token-deleted:      #cf222e;
+    --code-token-inserted:     #116329;
+    --code-token-error:        #cf222e;
+    --code-token-emphasis:     italic;
+    --code-token-strong:       700;
 
   /* ── Tables ────────────────────────────────────────────────────────────── */
   --table-header-bg:  var(--surface);
   --table-header-fg:  var(--ink);
   --table-stripe-bg:  var(--surface-alt);
   --table-radius:     var(--radius-md);
-  --table-cell-pad:   9px 14px;
+  --table-cell-pad:   5px 8px;
 
   /* ── Blockquotes ───────────────────────────────────────────────────────── */
   --bq-bg:            var(--surface);
@@ -116,6 +144,7 @@
   /* ── Lists ─────────────────────────────────────────────────────────────── */
   --list-indent:      var(--sp-6);
   --list-marker-color:var(--accent);
+  --list-leading:     1.22;
 
   /* ── Links ─────────────────────────────────────────────────────────────── */
   --link-color:       var(--accent);
@@ -137,11 +166,12 @@
   /* ── HR ────────────────────────────────────────────────────────────────── */
   --hr-color:         var(--border);
   --hr-thickness:     1px;
-  --hr-margin:        var(--sp-8) 0;
+  --hr-margin:        var(--sp-4) 0;
 
   /* ── Diagrams ──────────────────────────────────────────────────────────── */
-  --diagram-margin:   var(--sp-6) 0;
-  --diagram-max-h:    800px;
+  --diagram-margin:   var(--sp-2) 0 var(--sp-3);
+  --diagram-max-h:    420px;
+  --journey-max-h:    620px;
 
   /* ── TOC ───────────────────────────────────────────────────────────────── */
   --toc-title-size:   20pt;
@@ -154,15 +184,15 @@
 
   /* ── Callouts / Admonitions  (Obsidian  > [!type]  —  Apple-style) ────── */
 
-  --callout-radius:         10px;
+  --callout-radius:         8px;
   --callout-border-width:   3px;
-  --callout-margin:         var(--sp-5) 0;
-  --callout-font-size:      9.5pt;
-  --callout-line-height:    1.65;
+  --callout-margin:         var(--sp-3) 0;
+  --callout-font-size:      10.8pt;
+  --callout-line-height:    1.24;
   --callout-shadow:         0 1px 3px rgba(0,0,0,0.04);
-  --callout-body-padding:   10px 16px 12px;
-  --callout-header-padding: 8px 16px 7px;
-  --callout-header-gap:     7px;
+  --callout-body-padding:   6px 12px 7px;
+  --callout-header-padding: 5px 12px 4px;
+  --callout-header-gap:     6px;
   --callout-title-weight:   600;
   --callout-title-size:     8.5pt;
   --callout-title-tracking: 0.03em;
@@ -264,7 +294,7 @@
 
 /* Reset page counter after cover — the content starts at page 1 */
 @page post_cover {
-  counter-reset: page;
+  counter-reset: page 1;
 }
 
 .page-reset {
@@ -295,6 +325,11 @@ body {
   overflow-wrap: break-word;
   hyphens: none;
   -weasyprint-hyphens: none;
+}
+
+.page-break {
+  page-break-after: always;
+  break-after: page;
 }
 
 
@@ -410,7 +445,7 @@ h1 {
   font-weight: var(--h1-weight);
   color: var(--ink);
   letter-spacing: -0.025em;
-  margin: var(--sp-12) 0 var(--sp-5);
+  margin: var(--sp-10) 0 var(--sp-5);
   padding-bottom: var(--sp-3);
   page-break-after: avoid;
 }
@@ -422,7 +457,7 @@ h2 {
   color: var(--ink);
   letter-spacing: -0.018em;
   line-height: 1.28;
-  margin: var(--sp-10) 0 var(--sp-4);
+  margin: var(--sp-8) 0 var(--sp-3);
   padding-bottom: var(--sp-2);
   border-bottom: 1.5px solid var(--border);
   page-break-after: avoid;
@@ -433,7 +468,7 @@ h3 {
   font-size: var(--h3-size);
   font-weight: var(--h3-weight);
   color: var(--ink);
-  margin: var(--sp-8) 0 var(--sp-3);
+  margin: var(--sp-6) 0 var(--sp-2);
   page-break-after: avoid;
 }
 
@@ -444,7 +479,7 @@ h4 {
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin: var(--sp-5) 0 var(--sp-2);
+  margin: var(--sp-4) 0 var(--sp-1);
   page-break-after: avoid;
 }
 
@@ -453,7 +488,7 @@ h5 {
   font-size: var(--body-size);
   font-weight: var(--bold-weight);
   color: var(--ink);
-  margin: var(--sp-4) 0 var(--sp-1);
+  margin: var(--sp-3) 0 0;
   page-break-after: avoid;
 }
 
@@ -464,7 +499,7 @@ h6 {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin: var(--sp-4) 0 var(--sp-1);
+  margin: var(--sp-3) 0 0;
   page-break-after: avoid;
 }
 
@@ -478,7 +513,7 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
    PROSE
    ═══════════════════════════════════════════════════════════════════════════ */
 p {
-  margin: 0 0 var(--sp-3);
+  margin: 0 0 var(--sp-2-5);
   orphans: 3;
   widows: 3;
 }
@@ -545,8 +580,8 @@ blockquote {
   color: var(--bq-fg);
   border-left: var(--bq-border-width) solid var(--bq-border);
   border-radius: var(--bq-radius);
-  font-size: 9.5pt;
-  line-height: 1.65;
+  font-size: var(--body-size);
+  line-height: var(--body-leading);
   page-break-inside: avoid;
 }
 
@@ -590,11 +625,16 @@ blockquote blockquote {
   padding: var(--callout-header-padding);
 }
 
-/* ── Inline icon (no badge) ────────────────────────────────────────────── */
+/* ── Inline SVG icon ───────────────────────────────────────────────────── */
 .callout-icon {
-  font-size: var(--callout-icon-size);
+  display: flex;
+  align-items: center;
   line-height: 1;
   flex-shrink: 0;
+}
+
+.callout-icon svg {
+  display: block;
 }
 
 /* ── Title ─────────────────────────────────────────────────────────────── */
@@ -617,7 +657,7 @@ blockquote blockquote {
 .callout-body code         { font-size: 0.86em; }
 .callout-body strong       { color: var(--ink); }
 .callout-body ul,
-.callout-body ol           { margin: var(--sp-2) 0; padding-left: var(--sp-5); }
+.callout-body ol           { margin: var(--sp-1) 0; padding-left: var(--sp-5); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -665,8 +705,8 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin: var(--sp-5) 0;
-  font-size: 9pt;
+  margin: var(--sp-3) 0 var(--sp-4);
+  font-size: 10pt;
   border: 1px solid var(--border);
   border-radius: var(--table-radius);
   overflow: hidden;
@@ -680,7 +720,7 @@ thead th {
   padding: var(--table-cell-pad);
   text-align: left;
   border-bottom: 1.5px solid var(--border);
-  font-size: var(--small-size);
+  font-size: 9.5pt;
   letter-spacing: 0.01em;
 }
 
@@ -693,10 +733,15 @@ tbody tr:nth-child(even)   { background: var(--table-stripe-bg); }
 tbody td {
   padding: var(--table-cell-pad);
   vertical-align: top;
-  line-height: 1.5;
+  line-height: 1.35;
   border-bottom: 1px solid var(--border-light);
 }
 tbody td:first-child       { font-weight: var(--bold-weight); color: var(--ink); }
+
+table code {
+  font-size: 0.84em;
+  padding: 1px 3px;
+}
 
 /* Remove bottom border from last row (the table border handles it) */
 tbody tr:last-child td     { border-bottom: none; }
@@ -721,10 +766,11 @@ code {
 pre {
   background: var(--code-bg);
   color: var(--code-fg);
+  border: 1px solid var(--code-border);
   padding: var(--code-padding);
   border-radius: var(--code-radius);
   font-size: var(--small-size);
-  line-height: 1.6;
+  line-height: 1.42;
   margin: var(--sp-4) 0;
   white-space: pre-wrap;
   page-break-inside: avoid;
@@ -738,25 +784,145 @@ pre code {
   border-radius: 0;
 }
 
+.codehilite {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--code-radius);
+  margin: var(--sp-4) 0;
+  page-break-inside: avoid;
+  overflow: hidden;
+}
+
+.codehilite pre {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: var(--code-padding);
+}
+
+.codehilite code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Pygments token classes. They are language-agnostic, so the same root
+   variables color TypeScript, SQL, YAML, JSON, Python, Bash, etc. */
+.codehilite .c,
+.codehilite .ch,
+.codehilite .cm,
+.codehilite .cp,
+.codehilite .cpf,
+.codehilite .c1,
+.codehilite .cs { color: var(--code-token-comment); font-style: italic; }
+
+.codehilite .k,
+.codehilite .kc,
+.codehilite .kd,
+.codehilite .kn,
+.codehilite .kp,
+.codehilite .kr { color: var(--code-token-keyword); font-weight: var(--bold-weight); }
+.codehilite .kt { color: var(--code-token-type); font-weight: var(--bold-weight); }
+.codehilite .o,
+.codehilite .ow { color: var(--code-token-operator); }
+.codehilite .p { color: var(--code-token-punctuation); }
+
+.codehilite .s,
+.codehilite .sa,
+.codehilite .sb,
+.codehilite .sc,
+.codehilite .dl,
+.codehilite .sd,
+.codehilite .s2,
+.codehilite .se,
+.codehilite .sh,
+.codehilite .si,
+.codehilite .sx,
+.codehilite .sr,
+.codehilite .s1,
+.codehilite .ss { color: var(--code-token-string); }
+
+.codehilite .m,
+.codehilite .mb,
+.codehilite .mf,
+.codehilite .mh,
+.codehilite .mi,
+.codehilite .mo,
+.codehilite .il { color: var(--code-token-number); }
+
+.codehilite .n,
+.codehilite .nx { color: var(--code-token-name); }
+/* attribute / property access  →  method color */
+.codehilite .na { color: var(--code-token-method); }
+.codehilite .nb,
+.codehilite .bp { color: var(--code-token-builtin); }
+.codehilite .nc { color: var(--code-token-class); font-weight: var(--bold-weight); }
+.codehilite .no { color: var(--code-token-constant); }
+/* decorators */
+.codehilite .nd { color: var(--code-token-method); font-style: italic; }
+.codehilite .ni { color: var(--code-token-variable); }
+.codehilite .ne { color: var(--code-token-class); font-weight: var(--bold-weight); }
+/* function / method definitions */
+.codehilite .nf,
+.codehilite .fm { color: var(--code-token-function); font-weight: var(--bold-weight); }
+.codehilite .nl,
+.codehilite .nn { color: var(--code-token-name); }
+.codehilite .nt { color: var(--code-token-tag); font-weight: var(--bold-weight); }
+/* variable instances — distinct shade from class */
+.codehilite .nv,
+.codehilite .vc,
+.codehilite .vg,
+.codehilite .vi,
+.codehilite .vm { color: var(--code-token-variable); }
+
+/* ── Bracket families (injected by _colorize_brackets post-processor) ─── */
+.codehilite .p-brace   { color: var(--code-token-brace);   font-weight: var(--bold-weight); }
+.codehilite .p-bracket { color: var(--code-token-bracket); font-weight: var(--bold-weight); }
+.codehilite .p-paren   { color: var(--code-token-paren); }
+
+.codehilite .gh,
+.codehilite .gu { color: var(--code-token-keyword); font-weight: var(--bold-weight); }
+.codehilite .gd { color: var(--code-token-deleted); background: rgba(207,34,46,0.08); }
+.codehilite .gi { color: var(--code-token-inserted); background: rgba(17,99,41,0.08); }
+.codehilite .gr,
+.codehilite .gt,
+.codehilite .err { color: var(--code-token-error); }
+.codehilite .ge { font-style: var(--code-token-emphasis); }
+.codehilite .gs { font-weight: var(--code-token-strong); }
+.codehilite .go,
+.codehilite .gp { color: var(--code-line-fg); }
+.codehilite .w { color: inherit; }
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LISTS & MISC
    ═══════════════════════════════════════════════════════════════════════════ */
 ul, ol {
   padding-left: var(--list-indent);
-  margin: var(--sp-3) 0 var(--sp-4);
+  margin: var(--sp-1) 0 var(--sp-2);
 }
 
 li {
-  margin-bottom: var(--sp-2);
-  line-height: 1.65;
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: var(--list-leading);
 }
 li::marker { color: var(--list-marker-color); font-weight: var(--bold-weight); }
 
+li + li { margin-top: 0; }
+
+li > p {
+  margin: 0;
+  line-height: var(--list-leading);
+}
+
 /* Nested lists — tighter spacing */
 li > ul, li > ol {
-  margin-top: var(--sp-1);
-  margin-bottom: var(--sp-1);
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 hr {
@@ -768,6 +934,15 @@ hr {
     var(--hr-color) 85%,
     transparent 100%);
   margin: var(--hr-margin);
+}
+
+hr::after {
+  content: "";
+  display: block;
+  width: 48px;
+  height: var(--hr-thickness);
+  margin: 0 auto;
+  background: var(--accent);
 }
 
 img {
@@ -782,9 +957,19 @@ img {
 }
 
 .diagram img {
-  max-width: 100%;
+  max-width: 76%;
   max-height: var(--diagram-max-h);
   border: none;
+}
+
+.diagram-mermaid-journey {
+  margin: var(--sp-2) -10mm var(--sp-3);
+}
+
+.diagram-mermaid-journey img {
+  max-width: 100%;
+  width: 100%;
+  max-height: var(--journey-max-h);
 }
 
 

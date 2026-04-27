@@ -17,7 +17,7 @@ Usage examples::
 Quick-start::
 
     python3 -m venv .venv && source .venv/bin/activate
-    pip install -U pip weasyprint markdown requests
+    pip install -U pip weasyprint markdown pygments requests
     python3 scripts/md-to-pdf/md-to-pdf.py README.md
 """
 
@@ -32,6 +32,7 @@ import zlib
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import markdown
 import requests
@@ -46,6 +47,69 @@ TIMEOUT = 60
 DELAY = 1.2
 
 _MD_LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+
+MARKDOWN_EXTENSIONS = ["tables", "fenced_code", "codehilite", "sane_lists", "smarty", "attr_list"]
+MARKDOWN_EXTENSION_CONFIGS: dict[str, dict[str, Any]] = {
+    "codehilite": {
+        "guess_lang": False,
+        "linenums": False,
+        "noclasses": False,
+        "pygments_style": "default",
+        "use_pygments": True,
+    }
+}
+
+
+_BRACKET_RE = re.compile(r'<span class="p">([{}\[\]()])</span>')
+
+
+def _colorize_brackets(html: str) -> str:
+    """Add bracket-specific sub-classes to Pygments ``.p`` punctuation spans.
+
+    Pygments emits a single ``.p`` class for every punctuation token, making
+    it impossible to distinguish ``{``, ``[``, ``(`` via CSS alone.  This
+    post-processor rewrites those spans so the theme can assign a unique color
+    to each bracket family through CSS variables.
+
+    Resulting extra classes:
+      - ``.p-brace``   for ``{`` / ``}``
+      - ``.p-bracket`` for ``[`` / ``]``
+      - ``.p-paren``   for ``(`` / ``)``, left unchanged in color by default
+
+    :param html: HTML produced by Python-Markdown + CodeHilite.
+    :returns:    HTML with bracket spans annotated with extra classes.
+    """
+    def _repl(m: re.Match) -> str:
+        char = m.group(1)
+        if char in "{}":
+            extra = "p-brace"
+        elif char in "[]":
+            extra = "p-bracket"
+        else:  # ()
+            extra = "p-paren"
+        return f'<span class="p {extra}">{char}</span>'
+
+    return _BRACKET_RE.sub(_repl, html)
+
+
+def render_markdown(text: str) -> str:
+    """Render Markdown using the shared extension set.
+
+    Code blocks go through Python-Markdown's CodeHilite extension so Pygments
+    emits token classes (``.k``, ``.s``, ``.nf``, etc.).  The theme maps these
+    classes to CSS variables, keeping code colors configurable from ``:root``.
+
+    A bracket post-processor then splits the generic ``.p`` class into
+    ``.p-brace`` / ``.p-bracket`` / ``.p-paren`` so each bracket family can
+    receive its own color token.
+    """
+    html = markdown.markdown(
+        text,
+        extensions=MARKDOWN_EXTENSIONS,
+        extension_configs=MARKDOWN_EXTENSION_CONFIGS,
+        output_format="html",
+    )
+    return _colorize_brackets(html)
 
 
 def strip_md_markup(text: str) -> str:
@@ -121,7 +185,7 @@ def build_toc(md_text: str) -> str:
 
     lines: list[str] = [
         '<nav class="toc">',
-        '<h2 class="toc-title">Table of Contents</h2>',
+        '<h2 class="toc-title">Table des matières</h2>',
         '<ol class="toc-root">',
     ]
     in_sub = False
@@ -295,11 +359,18 @@ def replace_mermaid_blocks(md_text: str, no_cache: bool = False) -> str:
     def _sub(m: re.Match) -> str:
         n[0] += 1
         code = _strip_emoji(m.group(1).strip())
+        code_parts = code.split(None, 1)
+        diagram_type = code_parts[0].lower() if code_parts else ""
+        diagram_class = (
+            "diagram diagram-mermaid-journey"
+            if diagram_type == "journey"
+            else "diagram"
+        )
         print(f"\n   [{n[0]}] Diagram…")
         b64 = render_mermaid(code, no_cache)
         if b64:
             return (
-                f'\n<div class="diagram">'
+                f'\n<div class="{diagram_class}">'
                 f'<img src="data:image/png;base64,{b64}" '
                 f'alt="Diagram {n[0]}"/>'
                 f"</div>\n"
@@ -364,31 +435,86 @@ _CALLOUT_RE = re.compile(
     re.IGNORECASE,
 )
 
+
+def _svg(path_d: str, color: str, size: int = 15) -> str:
+    """Return a compact inline SVG icon for use in callout headers.
+
+    :param path_d: SVG ``<path d="…">`` data (24×24 viewBox).
+    :param color:  Fill color string (hex or named CSS color).
+    :param size:   Rendered pixel size.
+    :returns: Inline ``<svg>`` HTML string.
+    """
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" '
+        f'viewBox="0 0 24 24" fill="{color}" '
+        f'style="display:inline-block;vertical-align:middle;flex-shrink:0">'
+        f'<path d="{path_d}"/></svg>'
+    )
+
+
+# ── SVG path data (Material Design / Heroicons 24-px outline adapted) ────────
+_P_INFO    = ("M11 17h2v-6h-2v6zm1-8c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 "
+              ".45 1 1 1zm0-7C6.48 2 2 6.48 2 12s4.48 10 10 10 "
+              "10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 "
+              "8-8 8 3.59 8 8-3.59 8-8 8z")
+_P_TIP     = ("M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 "
+              "5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 "
+              "1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z")
+_P_CHECK   = ("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 "
+              "12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z")
+_P_WARN    = ("M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z")
+_P_DANGER  = ("M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 "
+              "10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 "
+              "15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 "
+              "13.41 12 17 15.59z")
+_P_BUG     = ("M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 "
+              "15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5s-.96.06-1.41.17L8.41 "
+              "3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-"
+              ".09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 "
+              "2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v"
+              "-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v"
+              "-2h4v2z")
+_P_EXAMPLE = ("M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 "
+              "2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h"
+              "-2zm3 18H5V8h14v11z")
+_P_QUOTE   = ("M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z")
+_P_QUEST   = ("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 "
+              "12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 "
+              "15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-"
+              "1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 "
+              "4c0 .88-.36 1.68-.93 2.25z")
+_P_ABSTRACT= ("M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 "
+              "2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 "
+              "9H13z")
+_P_TODO    = ("M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 "
+              "2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 "
+              "14.17l7.59-7.59L19 8l-9 9z")
+
 CALLOUT_DEFAULTS: dict[str, tuple[str, str]] = {
-    "note":      ("Note",      "📝"),
-    "info":      ("Info",      "ℹ️"),
-    "tip":       ("Tip",       "💡"),
-    "success":   ("Success",   "✅"),
-    "check":     ("Check",     "✅"),
-    "done":      ("Done",      "✅"),
-    "warning":   ("Warning",   "⚠️"),
-    "caution":   ("Caution",   "⚠️"),
-    "attention": ("Attention", "⚠️"),
-    "danger":    ("Danger",    "🔴"),
-    "error":     ("Error",     "❌"),
-    "failure":   ("Failure",   "❌"),
-    "fail":      ("Fail",      "❌"),
-    "bug":       ("Bug",       "🐛"),
-    "example":   ("Example",   "📎"),
-    "quote":     ("Quote",     "💬"),
-    "cite":      ("Quote",     "💬"),
-    "question":  ("Question",  "❓"),
-    "help":      ("Help",      "❓"),
-    "faq":       ("FAQ",       "❓"),
-    "abstract":  ("Abstract",  "📋"),
-    "summary":   ("Summary",   "📋"),
-    "tldr":      ("TL;DR",    "📋"),
-    "todo":      ("To-Do",     "☑️"),
+    "note":      ("Note",      _svg(_P_INFO,    "#0ea5e9")),
+    "info":      ("Info",      _svg(_P_INFO,    "#0ea5e9")),
+    "tip":       ("Tip",       _svg(_P_TIP,     "#f59e0b")),
+    "success":   ("Success",   _svg(_P_CHECK,   "#22c55e")),
+    "check":     ("Check",     _svg(_P_CHECK,   "#22c55e")),
+    "done":      ("Done",      _svg(_P_CHECK,   "#22c55e")),
+    "warning":   ("Warning",   _svg(_P_WARN,    "#f97316")),
+    "caution":   ("Caution",   _svg(_P_WARN,    "#f97316")),
+    "attention": ("Attention", _svg(_P_WARN,    "#f97316")),
+    "danger":    ("Danger",    _svg(_P_DANGER,  "#ef4444")),
+    "error":     ("Error",     _svg(_P_DANGER,  "#ef4444")),
+    "failure":   ("Failure",   _svg(_P_DANGER,  "#ef4444")),
+    "fail":      ("Fail",      _svg(_P_DANGER,  "#ef4444")),
+    "bug":       ("Bug",       _svg(_P_BUG,     "#dc2626")),
+    "example":   ("Example",   _svg(_P_EXAMPLE, "#8b5cf6")),
+    "quote":     ("Quote",     _svg(_P_QUOTE,   "#6b7280")),
+    "cite":      ("Quote",     _svg(_P_QUOTE,   "#6b7280")),
+    "question":  ("Question",  _svg(_P_QUEST,   "#a855f7")),
+    "help":      ("Help",      _svg(_P_QUEST,   "#a855f7")),
+    "faq":       ("FAQ",       _svg(_P_QUEST,   "#a855f7")),
+    "abstract":  ("Abstract",  _svg(_P_ABSTRACT,"#3b82f6")),
+    "summary":   ("Summary",   _svg(_P_ABSTRACT,"#3b82f6")),
+    "tldr":      ("TL;DR",     _svg(_P_ABSTRACT,"#3b82f6")),
+    "todo":      ("To-Do",     _svg(_P_TODO,    "#06b6d4")),
 }
 
 _CALLOUT_ALIAS: dict[str, str] = {
@@ -417,11 +543,7 @@ def _md_inline(text: str) -> str:
     :param text: Markdown fragment (typically a few lines).
     :returns: Rendered HTML string.
     """
-    return markdown.markdown(
-        text,
-        extensions=["tables", "fenced_code", "sane_lists", "smarty", "attr_list"],
-        output_format="html5",
-    )
+    return render_markdown(text)
 
 
 def convert_callouts(text: str) -> str:
@@ -769,6 +891,15 @@ def convert(args: argparse.Namespace) -> None:
     toc_html = build_toc(md_text)
     print(f"📑  TOC: {toc_html.count('<li')} entries")
 
+    front_md = ""
+    chapter_start = re.search(r"^##\s+CHAPITRE\b", md_text, flags=re.M)
+    if chapter_start:
+        front_md = md_text[: chapter_start.start()]
+        md_text = md_text[chapter_start.start():]
+        front_md = re.sub(r"^#\s+.+\n+", "", front_md, count=1, flags=re.M)
+        if front_md.strip():
+            print("📄  Front matter: after generated TOC")
+
     md_text = re.sub(
         r"^## Table of Contents\s*\n[\s\S]*?(?=\n## |\n---|\Z)",
         "",
@@ -782,6 +913,23 @@ def convert(args: argparse.Namespace) -> None:
         flags=re.M,
     )
 
+    front_md = re.sub(
+        r"^## Table of Contents\s*\n[\s\S]*?(?=\n## |\n---|\Z)",
+        "",
+        front_md,
+        flags=re.M,
+    )
+    front_md = re.sub(
+        r"^## Table des matières\s*\n[\s\S]*?(?=\n## |\n---|\Z)",
+        "",
+        front_md,
+        flags=re.M,
+    )
+
+    front_md = convert_callouts(front_md)
+    front_md = fix_blockquote_linebreaks(front_md)
+    front_md = fix_list_separation(front_md)
+
     md_text = convert_callouts(md_text)
     md_text = fix_blockquote_linebreaks(md_text)
     md_text = fix_list_separation(md_text)
@@ -793,16 +941,17 @@ def convert(args: argparse.Namespace) -> None:
 
     count = len(re.findall(r"```mermaid", md_text))
     print(f"\n🎨  Found {count} Mermaid diagram(s)")
+    front_md = replace_mermaid_blocks(front_md, args.no_cache)
     md_text = replace_mermaid_blocks(md_text, args.no_cache)
 
     print("\n📝  Converting Markdown → HTML…")
-    body_html = markdown.markdown(
-        md_text,
-        extensions=["tables", "fenced_code", "sane_lists", "smarty", "attr_list"],
-        output_format="html5",
-    )
+    front_html = render_markdown(front_md)
+    front_html = add_heading_ids(front_html)
+
+    body_html = render_markdown(md_text)
 
     body_html = add_heading_ids(body_html)
+    body_html = front_html + body_html
 
     full_html = build_html(
         title,
