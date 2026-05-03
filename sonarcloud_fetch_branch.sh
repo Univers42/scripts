@@ -227,6 +227,25 @@ fetch_paginated() {
   rm -f "$tmp_file"
 }
 
+keep_open_issues() {
+  local issues_file="$1"
+  jq '
+    [
+      .[]
+      | select((.resolution // "") == "")
+      | select((.status // .issueStatus // "") as $status
+        | $status == "OPEN" or $status == "CONFIRMED" or $status == "REOPENED")
+    ]
+  ' "$issues_file" > "$issues_file.tmp"
+  mv "$issues_file.tmp" "$issues_file"
+}
+
+keep_hotspots_to_review() {
+  local hotspots_file="$1"
+  jq '[.[] | select((.status // "") == "TO_REVIEW")]' "$hotspots_file" > "$hotspots_file.tmp"
+  mv "$hotspots_file.tmp" "$hotspots_file"
+}
+
 run_scanner_if_requested() {
   if [[ "$RUN_SCANNER" == "0" || "$RUN_SCANNER" == "false" ]]; then
     echo "Skipping sonar-scanner; fetching latest published SonarCloud results."
@@ -375,9 +394,11 @@ main() {
 
   echo "Fetching SonarCloud issues..."
   fetch_paginated "/api/issues/search?componentKeys=$encoded_project&branch=$encoded_branch&resolved=false&statuses=OPEN,CONFIRMED,REOPENED&additionalFields=_all" "issues" "$issues_file"
+  keep_open_issues "$issues_file"
 
   echo "Fetching SonarCloud security hotspots..."
   fetch_paginated "/api/hotspots/search?projectKey=$encoded_project&branch=$encoded_branch&status=TO_REVIEW" "hotspots" "$hotspots_file"
+  keep_hotspots_to_review "$hotspots_file"
 
   echo "Fetching quality gate..."
   api_get "/api/qualitygates/project_status?projectKey=$encoded_project&branch=$encoded_branch" | jq '.' > "$quality_file"
