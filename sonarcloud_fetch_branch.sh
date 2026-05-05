@@ -17,12 +17,15 @@ readonly ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 readonly DEFAULT_BRANCH="main"
 readonly DEFAULT_HOST="https://sonarcloud.io"
 readonly DEFAULT_OUT_DIR="$ROOT_DIR/audit/sonar"
+readonly DEFAULT_PROJECT_KEY="Univers42_osionos"
+readonly DEFAULT_ORGANIZATION="univers42"
 
 BRANCH="${SONAR_BRANCH:-$DEFAULT_BRANCH}"
 HOST="${SONAR_HOST_URL:-$DEFAULT_HOST}"
 OUT_DIR="${SONAR_OUT_DIR:-$DEFAULT_OUT_DIR}"
 PROJECT_KEY="${SONAR_PROJECT_KEY:-}"
 PROJECT_DIR="${SONAR_PROJECT_DIR:-}"
+ORGANIZATION="${SONAR_ORGANIZATION:-}"
 RUN_SCANNER="${RUN_SONAR_SCANNER:-auto}"
 PER_PAGE="${SONAR_PAGE_SIZE:-500}"
 
@@ -34,6 +37,7 @@ Options:
   --branch NAME        SonarCloud branch to fetch (default: $DEFAULT_BRANCH)
   --project-key KEY    SonarCloud project key. If omitted, read from sonar-project.properties.
   --project-dir DIR    Directory that contains sonar-project.properties.
+  --organization KEY   SonarCloud organization key (default: $DEFAULT_ORGANIZATION)
   --out-dir DIR        Output directory (default: audit/sonar below repo root)
   --host URL           Sonar host URL (default: $DEFAULT_HOST)
   --scan               Run sonar-scanner before fetching results.
@@ -66,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --project-dir)
       PROJECT_DIR="${2:?Missing value for --project-dir}"
+      shift 2
+      ;;
+    --organization)
+      ORGANIZATION="${2:?Missing value for --organization}"
       shift 2
       ;;
     --out-dir)
@@ -150,8 +158,7 @@ find_project_file() {
   if [[ -n "$PROJECT_DIR" ]]; then
     local configured_file="$PROJECT_DIR/sonar-project.properties"
     [[ -f "$configured_file" ]] || {
-      echo "No sonar-project.properties found in $PROJECT_DIR" >&2
-      exit 1
+      return 1
     }
     printf '%s' "$configured_file"
     return 0
@@ -163,8 +170,7 @@ find_project_file() {
     -o -type f -name 'sonar-project.properties' -print | sort | head -n 1)"
 
   if [[ -z "$project_file" ]]; then
-    echo "No sonar-project.properties found below $ROOT_DIR" >&2
-    exit 1
+    return 1
   fi
 
   printf '%s' "$project_file"
@@ -246,6 +252,41 @@ keep_hotspots_to_review() {
   mv "$hotspots_file.tmp" "$hotspots_file"
 }
 
+wait_for_ce_task() {
+  local report_file="$PROJECT_DIR/.scannerwork/report-task.txt"
+  if [[ ! -f "$report_file" ]]; then
+    return 0
+  fi
+
+  local ce_task_id
+  ce_task_id="$(awk -F= '$1 == "ceTaskId" { print $2; exit }' "$report_file")"
+  if [[ -z "$ce_task_id" ]]; then
+    return 0
+  fi
+
+  echo "Waiting for SonarCloud to process analysis task $ce_task_id..."
+  local attempt status
+  for attempt in $(seq 1 60); do
+    status="$(api_get "/api/ce/task?id=$ce_task_id" | jq -r '.task.status // "UNKNOWN"')"
+    case "$status" in
+      SUCCESS)
+        echo "SonarCloud processing complete."
+        return 0
+        ;;
+      FAILED|CANCELED)
+        echo "SonarCloud processing ended with status: $status" >&2
+        return 1
+        ;;
+      *)
+        sleep 2
+        ;;
+    esac
+  done
+
+  echo "Timed out waiting for SonarCloud processing." >&2
+  return 1
+}
+
 run_scanner_if_requested() {
   if [[ "$RUN_SCANNER" == "0" || "$RUN_SCANNER" == "false" ]]; then
     echo "Skipping sonar-scanner; fetching latest published SonarCloud results."
@@ -261,31 +302,54 @@ run_scanner_if_requested() {
     return 0
   fi
 
-  local scanner_cmd=(sonar-scanner)
-  if ! command -v sonar-scanner >/dev/null 2>&1; then
+  if ! command -v docker >/dev/null 2>&1; then
     if [[ "$RUN_SCANNER" == "1" || "$RUN_SCANNER" == "true" ]]; then
-      if command -v npx >/dev/null 2>&1; then
-        scanner_cmd=(npx --yes sonar-scanner)
-      else
-        echo "sonar-scanner was requested but neither sonar-scanner nor npx is installed." >&2
-        exit 1
-      fi
-    elif command -v npx >/dev/null 2>&1; then
-      scanner_cmd=(npx --yes sonar-scanner)
-    else
-      echo "sonar-scanner not found; fetching latest published SonarCloud results."
-      return 0
+      echo "sonar-scanner requires Docker for this project." >&2
+      exit 1
     fi
+    echo "Docker not found; fetching latest published SonarCloud results."
+    return 0
+  fi
+
+  local scanner_image="${SONAR_SCANNER_IMAGE:-sonarsource/sonar-scanner-cli}"
+  local git_mount=()
+  local project_mount=()
+  local scannerwork_mount=()
+  local container_project_dir="/usr/src"
+  local super_worktree=""
+  super_worktree="$(git -C "$PROJECT_DIR" rev-parse --show-superproject-working-tree 2>/dev/null || true)"
+  if [[ -n "$super_worktree" && -d "$super_worktree/.git" ]]; then
+    local relative_project_dir
+    relative_project_dir="$(realpath --relative-to="$super_worktree" "$PROJECT_DIR")"
+    container_project_dir="/$relative_project_dir"
+    git_mount=(-v "$super_worktree/.git:/.git:ro")
+  fi
+  project_mount=(-v "$PROJECT_DIR:$container_project_dir")
+  mkdir -p "$PROJECT_DIR/.scannerwork"
+  scannerwork_mount=(-v "$PROJECT_DIR/.scannerwork:/tmp/.scannerwork")
+
+  local scanner_args=(
+    "-Dsonar.host.url=$HOST"
+    "-Dsonar.projectKey=$PROJECT_KEY"
+    "-Dsonar.organization=$ORGANIZATION"
+  )
+
+  if [[ -n "$BRANCH" && "$BRANCH" != "$DEFAULT_BRANCH" ]]; then
+    scanner_args+=("-Dsonar.branch.name=$BRANCH")
   fi
 
   echo "Running sonar-scanner for branch '$BRANCH' from $PROJECT_DIR..."
-  (
-    cd "$PROJECT_DIR"
-    "${scanner_cmd[@]}" \
-      -Dsonar.host.url="$HOST" \
-      -Dsonar.token="$TOKEN" \
-      -Dsonar.branch.name="$BRANCH"
-  )
+  docker run --rm \
+    -e SONAR_HOST_URL="$HOST" \
+    -e SONAR_TOKEN="$TOKEN" \
+    "${project_mount[@]}" \
+    "${git_mount[@]}" \
+    "${scannerwork_mount[@]}" \
+    -w "$container_project_dir" \
+    "$scanner_image" \
+    "${scanner_args[@]}"
+
+  wait_for_ce_task
 }
 
 write_summary() {
@@ -354,18 +418,24 @@ main() {
 
   TOKEN="$(find_env_token)" || TOKEN=""
 
-  local project_file
-  project_file="$(find_project_file)"
-  PROJECT_DIR="$(cd "$(dirname "$project_file")" && pwd)"
+  local project_file=""
+  project_file="$(find_project_file)" || project_file=""
+  if [[ -n "$project_file" ]]; then
+    PROJECT_DIR="$(cd "$(dirname "$project_file")" && pwd)"
+  else
+    PROJECT_DIR="${PROJECT_DIR:-$ROOT_DIR}"
+  fi
 
-  if [[ -z "$PROJECT_KEY" ]]; then
+  if [[ -z "$PROJECT_KEY" && -n "$project_file" ]]; then
     PROJECT_KEY="$(read_property "$project_file" 'sonar.projectKey')"
   fi
 
-  if [[ -z "$PROJECT_KEY" ]]; then
-    echo "Unable to determine sonar.projectKey from $project_file" >&2
-    exit 1
+  if [[ -z "$ORGANIZATION" && -n "$project_file" ]]; then
+    ORGANIZATION="$(read_property "$project_file" 'sonar.organization')"
   fi
+
+  PROJECT_KEY="${PROJECT_KEY:-$DEFAULT_PROJECT_KEY}"
+  ORGANIZATION="${ORGANIZATION:-$DEFAULT_ORGANIZATION}"
 
   local safe_project safe_branch branch_out_dir
   safe_project="${PROJECT_KEY//[^A-Za-z0-9_.-]/_}"
@@ -376,6 +446,7 @@ main() {
   echo "Root       : $ROOT_DIR"
   echo "Project dir: $PROJECT_DIR"
   echo "Project key: $PROJECT_KEY"
+  echo "Organization: $ORGANIZATION"
   echo "Branch     : $BRANCH"
   echo "Output     : $branch_out_dir"
 
