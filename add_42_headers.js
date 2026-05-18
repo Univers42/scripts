@@ -177,11 +177,22 @@ for (const root of SCAN_ROOTS) {
       updatedBy: LOGIN,
     });
 
+    // Keep shebang as the first line — insert header after it.
+    let output;
+    if (text.startsWith('#!')) {
+      const nl = text.indexOf('\n');
+      const shebang = nl === -1 ? text : text.slice(0, nl + 1);
+      const rest    = nl === -1 ? ''   : text.slice(nl + 1);
+      output = shebang + header + rest;
+    } else {
+      output = header + text;
+    }
+
     if (DRY_RUN) {
       console.log(`[dry-run] would add header → ${path.relative(REPO_ROOT, file)}`);
     } else {
       try {
-        fs.writeFileSync(file, header + text);
+        fs.writeFileSync(file, output);
         console.log(`✓ ${path.relative(REPO_ROOT, file)}`);
       } catch (err) {
         console.error(`✗ ${file}: ${err.message}`);
