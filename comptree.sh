@@ -1,3 +1,15 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    comptree.sh                                        :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/05/18 21:19:26 by dlesieur          #+#    #+#              #
+#    Updated: 2026/05/18 21:19:26 by dlesieur         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
 #!/usr/bin/env bash
 # Show a single unified diff of two branches in VSCode (temporary readonly file).
 # Usage: ./scripts/show-branch-diff.sh <branchA> <branchB> [--fetch] [--three-dot] [--wait]
