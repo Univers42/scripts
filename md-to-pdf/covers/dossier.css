@@ -1,0 +1,464 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   dossier.css                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/28 00:00:00 by dlesieur          #+#    #+#             */
+/*   Updated: 2026/05/28 00:00:00 by dlesieur         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+/*
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  Cover Style:  DOSSIER                                                   ║
+ * ║                                                                          ║
+ * ║  An opulent editorial cover. Deep midnight gradient with golden          ║
+ * ║  accents, a massive display title, a hand-drawn double-line frame,       ║
+ * ║  and an archival metadata block. Designed to feel like a luxury          ║
+ * ║  technical compendium or museum catalogue.                               ║
+ * ║                                                                          ║
+ * ║  Usage:                                                                  ║
+ * ║    python3 md-to-pdf.py README.md --cover dossier                       ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER TOKENS  —  Tweak these to reskin the whole cover.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+
+  /* ── Surface palette ──────────────────────────────────────────────────── */
+  --dsr-night:              #07090f;       /* deep midnight base              */
+  --dsr-midnight:           #0d1220;       /* near-black indigo               */
+  --dsr-indigo:             #131a2e;       /* indigo midtone                  */
+  --dsr-ink:                #1c2440;       /* warm indigo highlight           */
+  --dsr-ember:              #2c1a16;       /* warm sunset tint                */
+  --dsr-paper:              #f3ece0;       /* primary ivory                   */
+  --dsr-paper-dim:          #cdc4b3;       /* dimmed ivory                    */
+  --dsr-paper-faint:        rgba(243,236,224,0.42);
+  --dsr-paper-ghost:        rgba(243,236,224,0.14);
+
+  /* ── Accents (gold + copper) ──────────────────────────────────────────── */
+  --dsr-gold:               #c9a961;       /* champagne gold                  */
+  --dsr-gold-bright:        #e6c878;       /* warm gold hover                 */
+  --dsr-gold-deep:          #8a6d2e;       /* aged brass                      */
+  --dsr-copper:             #d4683a;       /* burnt sienna                    */
+
+  /* ── Background composition ───────────────────────────────────────────── */
+  --dsr-bg: radial-gradient(ellipse at 25% 15%,  rgba(212,104,58,0.18) 0%, transparent 55%),
+            radial-gradient(ellipse at 85% 95%,  rgba(201,169,97,0.10) 0%, transparent 60%),
+            radial-gradient(circle  at 50% 50%,  rgba(28,36,64,0.55) 0%, transparent 70%),
+            linear-gradient(170deg,
+              var(--dsr-night)    0%,
+              var(--dsr-midnight) 35%,
+              var(--dsr-indigo)   65%,
+              var(--dsr-ember)   105%);
+
+  /* ── Decorative frame ─────────────────────────────────────────────────── */
+  --dsr-frame-outer-inset:  16mm;
+  --dsr-frame-inner-inset:  18mm;
+  --dsr-frame-outer-color:  rgba(201,169,97,0.55);
+  --dsr-frame-inner-color:  rgba(201,169,97,0.22);
+  --dsr-frame-corner-size:  14mm;
+
+  /* ── Typography ───────────────────────────────────────────────────────── */
+  --dsr-font-display:       "Calibri", "Carlito", "Georgia", "Times New Roman", serif;
+  --dsr-font-body:          "Calibri", "Carlito", Arial, sans-serif;
+  --dsr-font-mono:          "SF Mono", "Fira Code", Consolas, "Liberation Mono", monospace;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVER PAGE  —  A4 portrait, multilayered background, decorative frame
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover {
+  page: cover_page;
+  width:  210mm;
+  height: 297mm;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--dsr-bg);
+  color: var(--dsr-paper);
+  font-family: var(--dsr-font-body);
+}
+
+/* Outer gold frame (double line + corner notches) */
+.cover::before {
+  content: "";
+  position: absolute;
+  top:    var(--dsr-frame-outer-inset);
+  right:  var(--dsr-frame-outer-inset);
+  bottom: var(--dsr-frame-outer-inset);
+  left:   var(--dsr-frame-outer-inset);
+  border: 0.6pt solid var(--dsr-frame-outer-color);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Inner gold frame (slightly inset, fainter) */
+.cover::after {
+  content: "";
+  position: absolute;
+  top:    var(--dsr-frame-inner-inset);
+  right:  var(--dsr-frame-inner-inset);
+  bottom: var(--dsr-frame-inner-inset);
+  left:   var(--dsr-frame-inner-inset);
+  border: 0.4pt solid var(--dsr-frame-inner-color);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cover > * { position: relative; z-index: 2; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER  —  Brand mark (left)  ·  Volume stamp (right)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 28mm 22mm 0;
+  position: relative;
+}
+
+/* Brand: massive "DOSSIER" wordmark with hairline under it */
+.brand-logo {
+  display: block;
+  position: relative;
+  padding-bottom: 6mm;
+}
+
+.brand-logo::before {
+  content: "DOSSIER";
+  display: block;
+  font-family: var(--dsr-font-display);
+  font-size: 13pt;
+  font-weight: 700;
+  letter-spacing: 0.56em;
+  color: var(--dsr-gold);
+  text-transform: uppercase;
+}
+
+.brand-logo::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 22mm;
+  height: 0.6pt;
+  background: linear-gradient(90deg,
+    var(--dsr-gold) 0%,
+    var(--dsr-gold) 60%,
+    transparent 100%);
+}
+
+/* Volume stamp: small bordered tag, archival feel */
+.doc-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2mm;
+}
+
+.doc-badge::before {
+  content: "VOL. I";
+  font-family: var(--dsr-font-mono);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: var(--dsr-gold-bright);
+  padding: 4px 12px 3px;
+  border: 0.5pt solid var(--dsr-gold);
+  border-radius: 1pt;
+  background: rgba(201,169,97,0.06);
+  text-transform: uppercase;
+}
+
+.doc-badge::after {
+  content: "ARCHIVES · MMXXVI";
+  font-family: var(--dsr-font-mono);
+  font-size: 6pt;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: var(--dsr-paper-faint);
+  text-transform: uppercase;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BODY  —  Eyebrow · Massive Title · Subtitle · Rule · Metadata
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 22mm;
+  position: relative;
+}
+
+/* Big decorative "№ 01" chapter mark — sits behind the eyebrow */
+.cover-body::before {
+  content: "№ 01";
+  position: absolute;
+  top: -8mm;
+  right: 22mm;
+  font-family: var(--dsr-font-display);
+  font-size: 92pt;
+  font-weight: 200;
+  font-style: italic;
+  color: rgba(201,169,97,0.07);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Circular seal/stamp emblem — bottom-right of the body, fills the void */
+.cover-body::after {
+  content: "EST · MMXXVI";
+  position: absolute;
+  right: 22mm;
+  bottom: -4mm;
+  width: 36mm;
+  height: 36mm;
+  border: 0.8pt solid var(--dsr-gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--dsr-font-mono);
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--dsr-gold);
+  text-transform: uppercase;
+  background:
+    radial-gradient(circle, rgba(201,169,97,0.06) 0%, transparent 70%);
+  box-shadow:
+    inset 0 0 0 0.3pt rgba(201,169,97,0.30),
+    inset 0 0 0 4pt rgba(13,18,32,0.00);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Eyebrow: small uppercase label */
+.cover-eyebrow {
+  position: relative;
+  font-family: var(--dsr-font-body);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: var(--dsr-copper);
+  text-transform: uppercase;
+  margin: 0 0 14mm;
+  padding-left: 14mm;
+  z-index: 1;
+}
+
+/* Tiny line lead-in before the eyebrow */
+.cover-eyebrow::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 10mm;
+  height: 0.6pt;
+  background: var(--dsr-copper);
+}
+
+/* THE TITLE — massive, paper-ivory, tight leading */
+.cover-h1,
+h1.cover-h1 {
+  position: relative !important;
+  font-family: var(--dsr-font-display) !important;
+  font-size: 54pt !important;
+  font-weight: 800 !important;
+  line-height: 0.98 !important;
+  letter-spacing: -0.035em !important;
+  color: var(--dsr-paper) !important;
+  margin: 0 0 10mm !important;
+  padding: 0 !important;
+  border: none !important;
+  max-width: 90%;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.30);
+  z-index: 1;
+}
+
+/* Accent (subtitle after the em-dash) — gold, italic, slightly smaller */
+.cover-title-accent {
+  display: block;
+  margin-top: 6mm;
+  font-family: var(--dsr-font-display);
+  font-size: 22pt;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  color: var(--dsr-gold-bright);
+  line-height: 1.16;
+}
+
+/* Subtitle paragraph */
+.cover-sub {
+  position: relative;
+  font-family: var(--dsr-font-body);
+  font-size: 11.5pt;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--dsr-paper-dim);
+  margin: 0 0 14mm;
+  max-width: 130mm;
+  z-index: 1;
+}
+
+/* Rule — double gold line with decorative dot in the middle */
+.cover-rule {
+  position: relative;
+  width: 100mm;
+  height: 2pt;
+  background: transparent;
+  border-top: 0.6pt solid var(--dsr-gold);
+  border-bottom: 0.6pt solid var(--dsr-gold);
+  margin: 0 0 16mm;
+}
+
+.cover-rule::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6pt;
+  height: 6pt;
+  background: var(--dsr-gold);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2pt var(--dsr-night);
+}
+
+.cover-rule::after {
+  content: "❖";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-family: var(--dsr-font-display);
+  font-size: 12pt;
+  color: var(--dsr-gold-bright);
+  background: var(--dsr-night);
+  padding: 0 6mm;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+}
+
+/* Metadata grid */
+.cover-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5mm;
+  max-width: 110mm;
+  position: relative;
+  z-index: 1;
+}
+
+.meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8mm;
+  padding: 2mm 0;
+  border-bottom: 0.3pt solid rgba(243,236,224,0.10);
+}
+
+.meta-k {
+  min-width: 28mm;
+  font-family: var(--dsr-font-mono);
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--dsr-gold);
+  position: relative;
+  padding-left: 6mm;
+}
+
+.meta-k::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3mm;
+  height: 0.5pt;
+  background: var(--dsr-gold);
+}
+
+.meta-v {
+  font-family: var(--dsr-font-body);
+  font-size: 11pt;
+  font-weight: 500;
+  color: var(--dsr-paper);
+  letter-spacing: 0.01em;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER  —  Archival code + decorative ornament
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cover-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 22mm 28mm;
+  position: relative;
+}
+
+/* Top hairline above footer */
+.cover-foot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22mm;
+  right: 22mm;
+  height: 0.4pt;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--dsr-gold-deep) 20%,
+    var(--dsr-gold-deep) 80%,
+    transparent 100%);
+}
+
+/* Archival reference text */
+.cover-foot-text {
+  font-family: var(--dsr-font-mono);
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--dsr-paper-faint);
+  padding-top: 8mm;
+}
+
+.cover-foot-text::before {
+  content: "REF · ARCH-BE / MINI-BAAS / 2026";
+}
+
+/* Decorative diamond ornament instead of dots */
+.cover-foot-dots {
+  font-size: 0;          /* hide the original dots */
+  padding-top: 8mm;
+  display: flex;
+  align-items: center;
+  gap: 4pt;
+}
+
+.cover-foot-dots::before {
+  content: "◆ ◆ ◆";
+  font-family: var(--dsr-font-display);
+  font-size: 8pt;
+  color: var(--dsr-gold);
+  letter-spacing: 6pt;
+  white-space: nowrap;
+}

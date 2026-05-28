@@ -5,13 +5,8 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-<<<<<<< HEAD
 /*   Created: 2026/05/18 21:19:26 by dlesieur          #+#    #+#             */
 /*   Updated: 2026/05/18 21:19:26 by dlesieur         ###   ########.fr       */
-=======
-/*   Created: 2026/05/18 21:19:31 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:31 by dlesieur         ###   ########.fr       */
->>>>>>> tmp/detached-a3c30f43
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,40 +55,41 @@
   --accent-3:         #ff9f0a;       /* Tertiary accent (warnings, tags)       */
   --danger:           #ff3b30;       /* Errors, destructive                    */
 
-  /* ── Typography ────────────────────────────────────────────────────────── */
+  /* ── Typography  (Word-like scale: 11pt body, tight headings) ─────────── */
   --font-body:        "Calibri", "Carlito", Arial, sans-serif;
   --font-display:     "Calibri", "Carlito", Arial, sans-serif;
-  --font-mono:        "SF Mono", "Fira Code", "Cascadia Code", Consolas,
+  --font-mono:        "Consolas", "SF Mono", "Fira Code", "Cascadia Code",
                       "Liberation Mono", Menlo, monospace;
 
-  --body-size:        12pt;
-  --body-leading:     1.32;
+  --body-size:        11pt;
+  --body-leading:     1.42;
   --body-weight:      400;
   --bold-weight:      600;
-  --h1-size:          24pt;
+  --h1-size:          19pt;
   --h1-weight:        700;
-  --h2-size:          17pt;
+  --h2-size:          14pt;
   --h2-weight:        650;
-  --h3-size:          13pt;
-  --h3-weight:        650;
-  --h4-size:          11pt;
-  --h4-weight:        600;
-  --code-size:        0.84em;
-  --small-size:       10.5pt;
-  --caption-size:     10pt;
+  --h3-size:          11.5pt;
+  --h3-weight:        700;
+  --h4-size:          10.5pt;
+  --h4-weight:        700;
+  --code-size:        9.5pt;
+  --code-inline-size: 0.88em;
+  --small-size:       9.5pt;
+  --caption-size:     9pt;
 
   /* ── Spacing scale (4px base) ──────────────────────────────────────────── */
-  --sp-1:             4px;
-  --sp-2:             8px;
-  --sp-2-5:           10px;
-  --sp-3:             12px;
-  --sp-4:             16px;
-  --sp-5:             20px;
-  --sp-6:             24px;
-  --sp-8:             32px;
-  --sp-10:            40px;
-  --sp-12:            48px;
-  --sp-16:            64px;
+  --sp-1:             3px;
+  --sp-2:             6px;
+  --sp-2-5:           8px;
+  --sp-3:             10px;
+  --sp-4:             13px;
+  --sp-5:             16px;
+  --sp-6:             20px;
+  --sp-8:             26px;
+  --sp-10:            32px;
+  --sp-12:            38px;
+  --sp-16:            48px;
 
   /* ── Radius scale ──────────────────────────────────────────────────────── */
   --radius-sm:        4px;
@@ -103,65 +99,70 @@
 
   /* ── Page geometry ─────────────────────────────────────────────────────── */
   --page-size:        A4;
-  --page-margin-v:    24mm;
+  --page-margin-v:    22mm;
   --page-margin-h:    22mm;
 
-  /* ── Code blocks ───────────────────────────────────────────────────────── */
-    --code-bg:          #f2f4f8;
-    --code-fg:          #24292f;
-    --code-border:      #d8dee9;
-    --code-line-fg:     #6b7280;
-  --code-inline-bg:   var(--surface);
-  --code-inline-fg:   var(--accent-warm);
-  --code-radius:      var(--radius-lg);
-  --code-padding:     var(--sp-4) var(--sp-5);
+  /* ── Code blocks  (VS Code Light+ inspired) ───────────────────────────── */
+  --code-bg:          #f8f9fb;
+  --code-fg:          #1F2328;
+  --code-border:      #e1e4e8;
+  --code-line-fg:     #6b7280;
+  --code-inline-bg:   #f1f3f7;
+  --code-inline-fg:   #ad4a14;
+  --code-inline-border: transparent;
+  --code-radius:      var(--radius-md);
+  --code-padding:     var(--sp-3) var(--sp-4);
+  --code-line-height: 1.55;
 
-    /* Syntax tokens used by Python-Markdown CodeHilite / Pygments.
-      Override these variables to reskin every language consistently. */
-    --code-token-comment:      #6a737d; /* slate   — comments, doc-strings      */
-    --code-token-keyword:      #7c3aed; /* violet  — if/for/const/def/import     */
-    --code-token-operator:     #0550ae; /* blue    — = + - * / && || …           */
-    --code-token-string:       #0a7f42; /* green   — "…" '…' `…`                */
-    --code-token-number:       #b45309; /* amber   — 42 3.14 0xff                */
-    --code-token-name:         #24292f; /* ink     — plain identifiers           */
-    --code-token-function:     #8250df; /* purple  — function/method definitions */
-    --code-token-method:       #0969da; /* blue    — attribute access / calls    */
-    --code-token-class:        #953800; /* brown   — class names                 */
-    --code-token-variable:     #b5367a; /* pink    — variable instances          */
-    --code-token-constant:     #0550ae; /* blue    — ALL_CAPS / true/false/None  */
-    --code-token-attribute:    #116329; /* dark-gr — HTML/XML attribute keys     */
-    --code-token-tag:          #116329; /* dark-gr — HTML/XML tag names          */
-    --code-token-builtin:      #0969da; /* blue    — len/print/require           */
-    --code-token-type:         #953800; /* brown   — type annotations / generics */
-    --code-token-punctuation:  #57606a; /* gray    — , ; : generic               */
-    --code-token-brace:        #cb6820; /* orange  — { }  object/block delimiters*/
-    --code-token-bracket:      #1a7fd4; /* blue    — [ ]  array/index delimiters */
-    --code-token-paren:        #57606a; /* gray    — ( )  call/group (subtle)    */
-    --code-token-deleted:      #cf222e;
-    --code-token-inserted:     #116329;
-    --code-token-error:        #cf222e;
-    --code-token-emphasis:     italic;
-    --code-token-strong:       700;
+  /* VS Code Light+ syntax palette — vivid, high-contrast, instantly familiar.
+     Tokens are language-agnostic; one map covers TS, SQL, YAML, JSON, Python,
+     Bash, Dockerfile, HTML, CSS, etc. */
+  --code-token-comment:      #008000; /* VS Code green italic — comments         */
+  --code-token-keyword:      #0033B8; /* VS Code blue — if/for/const/def/import  */
+  --code-token-operator:     #1F2328; /* near-black — = + - * / && || …           */
+  --code-token-string:       #A31515; /* VS Code dark red — "…" '…' `…`          */
+  --code-token-number:       #098658; /* VS Code green — 42 3.14 0xff            */
+  --code-token-name:         #001080; /* VS Code navy — plain identifiers        */
+  --code-token-function:     #795E26; /* VS Code amber — function/method defs    */
+  --code-token-method:       #267F99; /* VS Code teal — attribute access / calls */
+  --code-token-class:        #267F99; /* VS Code teal — class names              */
+  --code-token-variable:     #001080; /* VS Code navy — variable instances       */
+  --code-token-constant:     #0070C1; /* VS Code blue — ALL_CAPS / true/false    */
+  --code-token-attribute:    #E50000; /* VS Code red — HTML/XML attribute keys   */
+  --code-token-tag:          #800000; /* VS Code maroon — HTML/XML tag names     */
+  --code-token-builtin:      #0070C1; /* VS Code blue — len/print/require        */
+  --code-token-type:         #267F99; /* VS Code teal — type annotations         */
+  --code-token-punctuation:  #1F2328; /* near-black — , ; : generic              */
+  --code-token-brace:        #C66E00; /* warm amber — { }  object/block delim    */
+  --code-token-bracket:      #1E7CD6; /* cool blue — [ ]  array/index delim      */
+  --code-token-paren:        #6A737D; /* subtle gray — ( ) call/group            */
+  --code-token-deleted:      #cf222e;
+  --code-token-inserted:     #098658;
+  --code-token-error:        #cf222e;
+  --code-token-emphasis:     italic;
+  --code-token-strong:       700;
 
   /* ── Tables ────────────────────────────────────────────────────────────── */
   --table-header-bg:  var(--surface);
   --table-header-fg:  var(--ink);
   --table-stripe-bg:  var(--surface-alt);
-  --table-radius:     var(--radius-md);
-  --table-cell-pad:   5px 8px;
+  --table-radius:     var(--radius-sm);
+  --table-cell-pad:   5px 9px;
+  --table-font-size:  10pt;
+  --table-header-size:9.5pt;
 
   /* ── Blockquotes ───────────────────────────────────────────────────────── */
   --bq-bg:            var(--surface);
   --bq-fg:            var(--mid);
   --bq-border:        var(--accent);
   --bq-border-width:  3px;
-  --bq-radius:        0 var(--radius-md) var(--radius-md) 0;
-  --bq-padding:       var(--sp-4) var(--sp-5);
+  --bq-radius:        0 var(--radius-sm) var(--radius-sm) 0;
+  --bq-padding:       var(--sp-3) var(--sp-4);
 
   /* ── Lists ─────────────────────────────────────────────────────────────── */
-  --list-indent:      var(--sp-6);
+  --list-indent:      var(--sp-5);
   --list-marker-color:var(--accent);
-  --list-leading:     1.22;
+  --list-leading:     1.42;
 
   /* ── Links ─────────────────────────────────────────────────────────────── */
   --link-color:       var(--accent);
@@ -191,28 +192,28 @@
   --journey-max-h:    620px;
 
   /* ── TOC ───────────────────────────────────────────────────────────────── */
-  --toc-title-size:   20pt;
+  --toc-title-size:   16pt;
   --toc-title-weight: 700;
-  --toc-h2-size:      10.5pt;
+  --toc-h2-size:      10pt;
   --toc-h2-weight:    600;
-  --toc-h3-size:      9.5pt;
-  --toc-num-size:     8pt;
+  --toc-h3-size:      9pt;
+  --toc-num-size:     7.5pt;
   --toc-border:       var(--border);
 
-  /* ── Callouts / Admonitions  (Obsidian  > [!type]  —  Apple-style) ────── */
+  /* ── Callouts / Admonitions  (Obsidian  > [!type]  —  compact) ────────── */
 
-  --callout-radius:         8px;
+  --callout-radius:         6px;
   --callout-border-width:   3px;
-  --callout-margin:         var(--sp-3) 0;
-  --callout-font-size:      10.8pt;
-  --callout-line-height:    1.24;
-  --callout-shadow:         0 1px 3px rgba(0,0,0,0.04);
+  --callout-margin:         var(--sp-2) 0;
+  --callout-font-size:      10pt;
+  --callout-line-height:    1.40;
+  --callout-shadow:         0 1px 2px rgba(0,0,0,0.03);
   --callout-body-padding:   6px 12px 7px;
-  --callout-header-padding: 5px 12px 4px;
+  --callout-header-padding: 4px 12px 3px;
   --callout-header-gap:     6px;
-  --callout-title-weight:   600;
-  --callout-title-size:     8.5pt;
-  --callout-title-tracking: 0.03em;
+  --callout-title-weight:   700;
+  --callout-title-size:     8pt;
+  --callout-title-tracking: 0.06em;
   --callout-title-transform:uppercase;
   --callout-icon-size:      0.85em;
 
@@ -389,7 +390,7 @@ li.toc-h2 > a {
   display: flex;
   align-items: baseline;
   gap: var(--sp-3);
-  padding: 11px 0 9px;
+  padding: 7px 0 6px;
   text-decoration: none;
   color: var(--ink);
   font-size: var(--toc-h2-size);
@@ -419,14 +420,14 @@ li.toc-h2 .toc-num::before {
 
 .toc-sub {
   list-style: none;
-  padding: var(--sp-1) 0 var(--sp-3) 36px;
+  padding: var(--sp-1) 0 var(--sp-2) 30px;
   margin: 0;
   counter-reset: toc-h3;
 }
 
 li.toc-h3 {
   counter-increment: toc-h3;
-  padding: 3px 0;
+  padding: 2px 0;
 }
 
 li.toc-h3 a {
@@ -461,9 +462,11 @@ h1 {
   font-size: var(--h1-size);
   font-weight: var(--h1-weight);
   color: var(--ink);
-  letter-spacing: -0.025em;
-  margin: var(--sp-10) 0 var(--sp-5);
-  padding-bottom: var(--sp-3);
+  letter-spacing: -0.018em;
+  line-height: 1.22;
+  margin: var(--sp-8) 0 var(--sp-4);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--accent);
   page-break-after: avoid;
 }
 
@@ -472,11 +475,11 @@ h2 {
   font-size: var(--h2-size);
   font-weight: var(--h2-weight);
   color: var(--ink);
-  letter-spacing: -0.018em;
+  letter-spacing: -0.012em;
   line-height: 1.28;
-  margin: var(--sp-8) 0 var(--sp-3);
-  padding-bottom: var(--sp-2);
-  border-bottom: 1.5px solid var(--border);
+  margin: var(--sp-6) 0 var(--sp-3);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--border);
   page-break-after: avoid;
 }
 
@@ -485,7 +488,8 @@ h3 {
   font-size: var(--h3-size);
   font-weight: var(--h3-weight);
   color: var(--ink);
-  margin: var(--sp-6) 0 var(--sp-2);
+  line-height: 1.32;
+  margin: var(--sp-5) 0 var(--sp-2);
   page-break-after: avoid;
 }
 
@@ -591,14 +595,14 @@ abbr[title] {
    BLOCKQUOTES  —  Callout-style with rounded corners
    ═══════════════════════════════════════════════════════════════════════════ */
 blockquote {
-  margin: var(--sp-5) 0;
+  margin: var(--sp-3) 0;
   padding: var(--bq-padding);
   background: var(--bq-bg);
   color: var(--bq-fg);
   border-left: var(--bq-border-width) solid var(--bq-border);
   border-radius: var(--bq-radius);
-  font-size: var(--body-size);
-  line-height: var(--body-leading);
+  font-size: 10.5pt;
+  line-height: 1.45;
   page-break-inside: avoid;
 }
 
@@ -722,8 +726,9 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin: var(--sp-3) 0 var(--sp-4);
-  font-size: 10pt;
+  margin: var(--sp-2) 0 var(--sp-3);
+  font-size: var(--table-font-size);
+  line-height: 1.35;
   border: 1px solid var(--border);
   border-radius: var(--table-radius);
   overflow: hidden;
@@ -737,7 +742,7 @@ thead th {
   padding: var(--table-cell-pad);
   text-align: left;
   border-bottom: 1.5px solid var(--border);
-  font-size: 9.5pt;
+  font-size: var(--table-header-size);
   letter-spacing: 0.01em;
 }
 
@@ -756,8 +761,9 @@ tbody td {
 tbody td:first-child       { font-weight: var(--bold-weight); color: var(--ink); }
 
 table code {
-  font-size: 0.84em;
-  padding: 1px 3px;
+  font-size: 0.86em;
+  padding: 1px 4px;
+  white-space: normal;
 }
 
 /* Remove bottom border from last row (the table border handles it) */
@@ -769,27 +775,33 @@ tbody tr:last-child td:last-child  { border-bottom-right-radius: var(--table-rad
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CODE
+   CODE  —  Inline + block (VS Code Light+ inspired palette)
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Inline code (`like-this`) — subtle warm tone, no border */
 code {
   font-family: var(--font-mono);
-  font-size: var(--code-size);
+  font-size: var(--code-inline-size);
   background: var(--code-inline-bg);
   color: var(--code-inline-fg);
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: var(--radius-sm);
+  word-break: break-word;
 }
 
+/* Block code — slightly tighter, fixed mono size for documentation */
 pre {
   background: var(--code-bg);
   color: var(--code-fg);
   border: 1px solid var(--code-border);
   padding: var(--code-padding);
   border-radius: var(--code-radius);
-  font-size: var(--small-size);
-  line-height: 1.42;
-  margin: var(--sp-4) 0;
+  font-family: var(--font-mono);
+  font-size: var(--code-size);
+  line-height: var(--code-line-height);
+  margin: var(--sp-3) 0;
   white-space: pre-wrap;
+  word-break: break-word;
   page-break-inside: avoid;
 }
 
@@ -798,7 +810,9 @@ pre code {
   color: inherit;
   padding: 0;
   font-size: inherit;
+  border: none;
   border-radius: 0;
+  white-space: pre-wrap;
 }
 
 .codehilite {
@@ -806,7 +820,7 @@ pre code {
   color: var(--code-fg);
   border: 1px solid var(--code-border);
   border-radius: var(--code-radius);
-  margin: var(--sp-4) 0;
+  margin: var(--sp-3) 0;
   page-break-inside: avoid;
   overflow: hidden;
 }
@@ -817,12 +831,15 @@ pre code {
   border-radius: 0;
   margin: 0;
   padding: var(--code-padding);
+  font-size: var(--code-size);
+  line-height: var(--code-line-height);
 }
 
 .codehilite code {
   background: transparent;
   color: inherit;
   padding: 0;
+  border: none;
   border-radius: 0;
 }
 
