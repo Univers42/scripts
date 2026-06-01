@@ -1,0 +1,7 @@
+# Mermaid SSR cache (regenerated on each PDF build)
+md-to-pdf/.mermaid-cache/
+
+# Python virtualenv (created by md-to-pdf bootstrap)
+md-to-pdf/.venv/
+*.pyc
+__pycache__/

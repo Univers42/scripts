@@ -73,8 +73,8 @@
   --h3-weight:        700;
   --h4-size:          10.5pt;
   --h4-weight:        700;
-  --code-size:        9.5pt;
-  --code-inline-size: 0.88em;
+  --code-size:        8.4pt;
+  --code-inline-size: 0.82em;
   --small-size:       9.5pt;
   --caption-size:     9pt;
 
@@ -108,33 +108,33 @@
   --code-border:      #e1e4e8;
   --code-line-fg:     #6b7280;
   --code-inline-bg:   #f1f3f7;
-  --code-inline-fg:   #ad4a14;
+  --code-inline-fg:   #8B3503;
   --code-inline-border: transparent;
   --code-radius:      var(--radius-md);
-  --code-padding:     var(--sp-3) var(--sp-4);
-  --code-line-height: 1.55;
+  --code-padding:     var(--sp-3) var(--sp-5);
+  --code-line-height: 1.5;
 
   /* VS Code Light+ syntax palette — vivid, high-contrast, instantly familiar.
      Tokens are language-agnostic; one map covers TS, SQL, YAML, JSON, Python,
      Bash, Dockerfile, HTML, CSS, etc. */
-  --code-token-comment:      #008000; /* VS Code green italic — comments         */
-  --code-token-keyword:      #0033B8; /* VS Code blue — if/for/const/def/import  */
+  --code-token-comment:      #1A7F37; /* VS Code green italic — comments         */
+  --code-token-keyword:      #0019A8; /* VS Code blue — if/for/const/def/import  */
   --code-token-operator:     #1F2328; /* near-black — = + - * / && || …           */
-  --code-token-string:       #A31515; /* VS Code dark red — "…" '…' `…`          */
+  --code-token-string:       #8B0000; /* VS Code dark red — "…" '…' `…`          */
   --code-token-number:       #098658; /* VS Code green — 42 3.14 0xff            */
-  --code-token-name:         #001080; /* VS Code navy — plain identifiers        */
-  --code-token-function:     #795E26; /* VS Code amber — function/method defs    */
-  --code-token-method:       #267F99; /* VS Code teal — attribute access / calls */
-  --code-token-class:        #267F99; /* VS Code teal — class names              */
-  --code-token-variable:     #001080; /* VS Code navy — variable instances       */
-  --code-token-constant:     #0070C1; /* VS Code blue — ALL_CAPS / true/false    */
+  --code-token-name:         #000A6B; /* VS Code navy — plain identifiers        */
+  --code-token-function:     #5B3A00; /* VS Code amber — function/method defs    */
+  --code-token-method:       #0E5C70; /* VS Code teal — attribute access / calls */
+  --code-token-class:        #0E5C70; /* VS Code teal — class names              */
+  --code-token-variable:     #000A6B; /* VS Code navy — variable instances       */
+  --code-token-constant:     #004F8C; /* VS Code blue — ALL_CAPS / true/false    */
   --code-token-attribute:    #E50000; /* VS Code red — HTML/XML attribute keys   */
   --code-token-tag:          #800000; /* VS Code maroon — HTML/XML tag names     */
-  --code-token-builtin:      #0070C1; /* VS Code blue — len/print/require        */
-  --code-token-type:         #267F99; /* VS Code teal — type annotations         */
+  --code-token-builtin:      #004F8C; /* VS Code blue — len/print/require        */
+  --code-token-type:         #0E5C70; /* VS Code teal — type annotations         */
   --code-token-punctuation:  #1F2328; /* near-black — , ; : generic              */
-  --code-token-brace:        #C66E00; /* warm amber — { }  object/block delim    */
-  --code-token-bracket:      #1E7CD6; /* cool blue — [ ]  array/index delim      */
+  --code-token-brace:        #A85800; /* warm amber — { }  object/block delim    */
+  --code-token-bracket:      #1565B0; /* cool blue — [ ]  array/index delim      */
   --code-token-paren:        #6A737D; /* subtle gray — ( ) call/group            */
   --code-token-deleted:      #cf222e;
   --code-token-inserted:     #098658;
@@ -803,6 +803,8 @@ pre {
   white-space: pre-wrap;
   word-break: break-word;
   page-break-inside: avoid;
+  tab-size: 2;
+  -moz-tab-size: 2;
 }
 
 pre code {
