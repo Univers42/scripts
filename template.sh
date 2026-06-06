@@ -10,39 +10,38 @@
 #                                                                              #
 # **************************************************************************** #
 
-#!/bin/bash
+#!/bin/sh
 
 # Create a C source or header file from a template, chosen by the extension of
-# each filename passed as an argument. With no arguments it does nothing.
+# each filename passed as an argument. With no arguments it does nothing. We
+# build the body with printf rather than a here-document so the redirection is
+# a single, portable simple command.
 template() {
-    local file="$1"
-    local extension="${file##*.}"
-
+    file="$1"
+    extension="${file##*.}"
     if [ "$extension" = "c" ]; then
-        cat <<'EOF' > "$file"
-#include <stdio.h>
-#include <stdlib.h>
-
-void function(void)
-{
-    return;
-}
-
-int main(void)
-{
-    return (0);
-}
-EOF
+        printf '%s\n' \
+            '#include <stdio.h>' \
+            '#include <stdlib.h>' \
+            '' \
+            'void function(void)' \
+            '{' \
+            '    return;' \
+            '}' \
+            '' \
+            'int main(void)' \
+            '{' \
+            '    return (0);' \
+            '}' > "$file"
         echo "C template written to $file"
     elif [ "$extension" = "h" ]; then
-        cat <<'EOF' > "$file"
-#ifndef _H
-# define _H
-
-/* define your macros here */
-
-#endif
-EOF
+        printf '%s\n' \
+            '#ifndef _H' \
+            '# define _H' \
+            '' \
+            '/* define your macros here */' \
+            '' \
+            '#endif' > "$file"
         echo "Header template written to $file"
     else
         echo "template: unknown extension '$extension' (use .c or .h)" >&2
