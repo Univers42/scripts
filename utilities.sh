@@ -5,13 +5,8 @@
 #                                                     +:+ +:+         +:+      #
 #    By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
-<<<<<<< HEAD
 #    Created: 2026/05/18 21:19:26 by dlesieur          #+#    #+#              #
 #    Updated: 2026/05/18 21:19:26 by dlesieur         ###   ########.fr        #
-=======
-#    Created: 2026/05/18 21:19:31 by dlesieur          #+#    #+#              #
-#    Updated: 2026/05/18 21:19:31 by dlesieur         ###   ########.fr        #
->>>>>>> tmp/detached-a3c30f43
 #                                                                              #
 # **************************************************************************** #
 
@@ -54,10 +49,6 @@ create_entity() {
     echo "Error: Invalid type. Use 'file' or 'folder'."
     exit 1
   fi
-
-  for i in {00..number}
-  do
-    $ complete_file = $full_path
 }
 
 # Main script

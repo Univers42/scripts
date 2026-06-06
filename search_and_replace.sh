@@ -5,13 +5,8 @@
 #                                                     +:+ +:+         +:+      #
 #    By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
-<<<<<<< HEAD
 #    Created: 2026/05/18 21:19:26 by dlesieur          #+#    #+#              #
 #    Updated: 2026/05/18 21:19:26 by dlesieur         ###   ########.fr        #
-=======
-#    Created: 2026/05/18 21:19:31 by dlesieur          #+#    #+#              #
-#    Updated: 2026/05/18 21:19:31 by dlesieur         ###   ########.fr        #
->>>>>>> tmp/detached-a3c30f43
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,3 +22,6 @@ if [ "$#" -ne 3 ]; then
 fi
 
 find . -type f -name "*$EXT" | while read -r file; do
+    sed -i "s/$SEARCH/$REPLACE/g" "$file"
+    echo "Updated: $file"
+done
