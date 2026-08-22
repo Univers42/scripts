@@ -1,20 +1,3 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    create_readmes.sh                                  :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-<<<<<<< HEAD
-#    Created: 2026/05/18 21:19:22 by dlesieur          #+#    #+#              #
-#    Updated: 2026/05/18 21:19:22 by dlesieur         ###   ########.fr        #
-=======
-#    Created: 2026/05/18 21:19:26 by dlesieur          #+#    #+#              #
-#    Updated: 2026/05/18 21:19:26 by dlesieur         ###   ########.fr        #
->>>>>>> tmp/detached-a3c30f43
-#                                                                              #
-# **************************************************************************** #
-
 #!/bin/bash
 
 # Set the root directory (you can replace "." with a specific path if needed)

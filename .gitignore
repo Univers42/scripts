@@ -1,0 +1,16 @@
+# Build/dependency trees. A committed virtualenv (md-to-pdf/.venv-pdf) once
+# grew this repo to 3432 tracked files -- 3312 of them site-packages, 101 MB
+# on disk -- and every branch merge then conflicted on hundreds of identical
+# vendored LICENSE files, because git pairs them up as renames.
+.venv*/
+venv/
+env/
+node_modules/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Editor/extension build output
+extension_vs_code_glass/out/
+*.vsix
