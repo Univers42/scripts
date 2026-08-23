@@ -48,7 +48,11 @@ KEEP_MARKERS = ("TODO", "FIXME", "XXX", "HACK", "NOTE")
 # be closed with `}  // namespace Foo`. Stripping those is not "cleaner" -- it
 # is a style violation the linter reports. So they survive even a full strip;
 # they are structural markers, not prose.
-STRUCTURAL_PREFIXES = ("// namespace", "//namespace")
+# `//<` marks an inline PATTERN ANNOTATION: concrete inputs that reach the
+# condition beside it, and the parse state they reach it in. They are data the
+# code depends on for legibility, not prose, so they survive a full strip -- the
+# distinctive marker is what makes that possible.
+STRUCTURAL_PREFIXES = ("// namespace", "//namespace", "//<")
 
 
 def split_comments(text):
