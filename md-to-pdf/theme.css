@@ -184,12 +184,11 @@
   /* ── HR ────────────────────────────────────────────────────────────────── */
   --hr-color:         var(--border);
   --hr-thickness:     1px;
-  --hr-margin:        var(--sp-4) 0;
+  --hr-margin:        var(--sp-8) 0;
 
   /* ── Diagrams ──────────────────────────────────────────────────────────── */
-  --diagram-margin:   var(--sp-2) 0 var(--sp-3);
-  --diagram-max-h:    420px;
-  --journey-max-h:    620px;
+  --diagram-margin:   var(--sp-6) 0;
+  --diagram-max-h:    800px;
 
   /* ── TOC ───────────────────────────────────────────────────────────────── */
   --toc-title-size:   16pt;
@@ -312,7 +311,7 @@
 
 /* Reset page counter after cover — the content starts at page 1 */
 @page post_cover {
-  counter-reset: page 1;
+  counter-reset: page;
 }
 
 .page-reset {
@@ -343,11 +342,6 @@ body {
   overflow-wrap: break-word;
   hyphens: none;
   -weasyprint-hyphens: none;
-}
-
-.page-break {
-  page-break-after: always;
-  break-after: page;
 }
 
 
@@ -500,7 +494,7 @@ h4 {
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin: var(--sp-4) 0 var(--sp-1);
+  margin: var(--sp-5) 0 var(--sp-2);
   page-break-after: avoid;
 }
 
@@ -509,7 +503,7 @@ h5 {
   font-size: var(--body-size);
   font-weight: var(--bold-weight);
   color: var(--ink);
-  margin: var(--sp-3) 0 0;
+  margin: var(--sp-4) 0 var(--sp-1);
   page-break-after: avoid;
 }
 
@@ -520,7 +514,7 @@ h6 {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin: var(--sp-3) 0 0;
+  margin: var(--sp-4) 0 var(--sp-1);
   page-break-after: avoid;
 }
 
@@ -534,7 +528,7 @@ h1 + *, h2 + *, h3 + *, h4 + *, h5 + *, h6 + * {
    PROSE
    ═══════════════════════════════════════════════════════════════════════════ */
 p {
-  margin: 0 0 var(--sp-2-5);
+  margin: 0 0 var(--sp-3);
   orphans: 3;
   widows: 3;
 }
@@ -646,16 +640,11 @@ blockquote blockquote {
   padding: var(--callout-header-padding);
 }
 
-/* ── Inline SVG icon ───────────────────────────────────────────────────── */
+/* ── Inline icon (no badge) ────────────────────────────────────────────── */
 .callout-icon {
-  display: flex;
-  align-items: center;
+  font-size: var(--callout-icon-size);
   line-height: 1;
   flex-shrink: 0;
-}
-
-.callout-icon svg {
-  display: block;
 }
 
 /* ── Title ─────────────────────────────────────────────────────────────── */
@@ -678,7 +667,7 @@ blockquote blockquote {
 .callout-body code         { font-size: 0.86em; }
 .callout-body strong       { color: var(--ink); }
 .callout-body ul,
-.callout-body ol           { margin: var(--sp-1) 0; padding-left: var(--sp-5); }
+.callout-body ol           { margin: var(--sp-2) 0; padding-left: var(--sp-5); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -755,7 +744,7 @@ tbody tr:nth-child(even)   { background: var(--table-stripe-bg); }
 tbody td {
   padding: var(--table-cell-pad);
   vertical-align: top;
-  line-height: 1.35;
+  line-height: 1.5;
   border-bottom: 1px solid var(--border-light);
 }
 tbody td:first-child       { font-weight: var(--bold-weight); color: var(--ink); }
@@ -793,7 +782,6 @@ code {
 pre {
   background: var(--code-bg);
   color: var(--code-fg);
-  border: 1px solid var(--code-border);
   padding: var(--code-padding);
   border-radius: var(--code-radius);
   font-family: var(--font-mono);
@@ -938,27 +926,19 @@ pre code {
    ═══════════════════════════════════════════════════════════════════════════ */
 ul, ol {
   padding-left: var(--list-indent);
-  margin: var(--sp-1) 0 var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-4);
 }
 
 li {
-  margin-top: 0;
-  margin-bottom: 0;
-  line-height: var(--list-leading);
+  margin-bottom: var(--sp-2);
+  line-height: 1.65;
 }
 li::marker { color: var(--list-marker-color); font-weight: var(--bold-weight); }
 
-li + li { margin-top: 0; }
-
-li > p {
-  margin: 0;
-  line-height: var(--list-leading);
-}
-
 /* Nested lists — tighter spacing */
 li > ul, li > ol {
-  margin-top: 0;
-  margin-bottom: 0;
+  margin-top: var(--sp-1);
+  margin-bottom: var(--sp-1);
 }
 
 hr {
@@ -970,15 +950,6 @@ hr {
     var(--hr-color) 85%,
     transparent 100%);
   margin: var(--hr-margin);
-}
-
-hr::after {
-  content: "";
-  display: block;
-  width: 48px;
-  height: var(--hr-thickness);
-  margin: 0 auto;
-  background: var(--accent);
 }
 
 img {
@@ -993,19 +964,9 @@ img {
 }
 
 .diagram img {
-  max-width: 76%;
+  max-width: 100%;
   max-height: var(--diagram-max-h);
   border: none;
-}
-
-.diagram-mermaid-journey {
-  margin: var(--sp-2) -10mm var(--sp-3);
-}
-
-.diagram-mermaid-journey img {
-  max-width: 100%;
-  width: 100%;
-  max-height: var(--journey-max-h);
 }
 
 
