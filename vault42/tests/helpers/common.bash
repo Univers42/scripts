@@ -38,3 +38,27 @@ use_docker_runner() {
   export CTL_CFG_DIR="$BATS_TEST_TMPDIR/ctlcfg"
   mkdir -p "$CTL_CFG_DIR"
 }
+
+# load_lib NAME… — source lib/NAME.sh for each.
+load_lib() {
+  local n
+  # shellcheck disable=SC1090 # the lib list is the caller's; each file is checked on its own
+  for n in "$@"; do . "$V42_ROOT_DIR/lib/$n.sh"; done
+}
+
+# make_repo [DIR] — a git repo at DIR (default $BATS_TEST_TMPDIR/repo), echoed.
+make_repo() {
+  local dir="${1:-$BATS_TEST_TMPDIR/repo}"
+  mkdir -p "$dir"
+  git -C "$dir" init -q
+  printf '%s' "$dir"
+}
+
+# write_conf ROOT [EXTRA LINE…] — a one-target config named `t` for env e, root ROOT, at $CONF.
+write_conf() {
+  local root="$1"
+  shift
+  CONF="$BATS_TEST_TMPDIR/vault42.conf"
+  printf '%s\n' '[t]' 'org = o' 'project = p' 'env = e' "root = $root" "$@" >"$CONF"
+  export CONF
+}
