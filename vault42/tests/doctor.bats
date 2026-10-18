@@ -34,6 +34,16 @@ teardown() { assert_no_stdin_violation; }
   [[ "$stderr" == *FT_PASSPHRASE* ]]
 }
 
+@test "doctor: without a passphrase it still checks the session and skips only what needs the key" {
+  unset FT_PASSPHRASE
+  run "$V42" doctor
+  [ "$status" -eq 5 ]
+  [[ "$output" == *"SKIP FT_PASSWORD"* ]]
+  [[ "$output" == *"SKIP keystore"*"needs FT_PASSPHRASE"* ]]
+  [[ "$output" == *"OK   session"* ]]
+  [[ "$output" == *"SKIP keys t"*"needs FT_PASSPHRASE"* ]]
+}
+
 @test "doctor: status is an alias" {
   run "$V42" status
   [ "$status" -eq 0 ]

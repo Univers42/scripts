@@ -56,15 +56,30 @@ _doc_cred() {
 }
 
 _doc_creds() {
+  local rc=0
   if [ -z "$(v42_cred passphrase)" ]; then
     _doc_row FAIL FT_PASSPHRASE "unset; export it to unlock the keystore"
     note "FT_PASSPHRASE is not set: export it to unlock the keystore (VAULT42_PASSPHRASE is accepted as an alias)"
-    return 5
+    rc=5
+  else
+    _doc_cred passphrase FT_PASSPHRASE ""
   fi
-  _doc_cred passphrase FT_PASSPHRASE ""
   _doc_cred password FT_PASSWORD "needed only by \`vault42 login\`"
   _doc_cred email FT_EMAIL "needed only by \`vault42 login\`"
   _doc_cred tenant FT_TENANT "needed only by \`vault42 login\`"
+  return "$rc"
+}
+
+# A missing passphrase still leaves the session checkable: the operator gets every
+# diagnosis in one run instead of fixing them one exit at a time.
+_doc_skip_keyed() {
+  local t
+  _doc_row SKIP keystore "needs FT_PASSPHRASE"
+  _doc_session
+  [ "${V42_CONFIG_RC:-0}" -ne 0 ] && return 0
+  for t in "${V42_TARGETS[@]}"; do
+    _doc_row SKIP "keys $t" "needs FT_PASSPHRASE"
+  done
 }
 
 _doc_network() {
@@ -125,7 +140,9 @@ cmd_doctor() {
   _doc_ctl
   _doc_config || rc=2
   _doc_creds || { [ "$?" -ne 5 ] || rc=5; }
-  if [ "$rc" -ne 5 ]; then
+  if [ "$rc" -eq 5 ]; then
+    _doc_skip_keyed
+  else
     _doc_keystore
     _doc_session
     [ "$V42_CONFIG_RC" -ne 0 ] || _doc_keys
