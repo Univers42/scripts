@@ -1,0 +1,45 @@
+# vault42.conf.example — copy to vault42.conf (or point --config / VAULT42_CONFIG at it).
+# INI, parsed as text and never executed. A value cannot contain " ;" (it starts a comment).
+# No credential belongs here: they come from the environment only.
+
+# A team target: the project's *.env* files and secrets/ directories.
+[app]
+org = acme
+project = webshop
+env = dev
+; relative paths resolve against this file's directory
+root = .
+; env, secrets, volumes. A volumes target cannot mix other kinds. Default: env secrets
+kinds = env secrets
+; team (default) or personal
+mode = team
+; files 42ctl seals so only you can read them; *.local is always private
+private = secrets/*.env secrets/*cert* secrets/*key*
+; added on top of `private`; VAULT42_APP_PRIVATE_ADD can add patterns too, never remove
+private_add =
+; files under secrets/ that are deliberately readable by every holder
+shared =
+; argv-split, no shell; the file must be tracked, executable and outside secrets/
+pre_push =
+post_pull =
+; refuse to push when the guard fails; a personal vault is used only if both of these say so
+personal_fallback = no
+; archive the git-ignored files outside the scan (or a directory) into one private file before a push
+stage_unscanned_as =
+stage_dir =
+stage_dir_as =
+; keep this much free (MB) before a pull --apply, a stage or a capture; the environment can only raise it
+min_free_mb = 1024
+
+; A volumes target: docker data volumes archived under its secrets/.
+; [volumes]
+; org = acme
+; project = webshop
+; env = volumes
+; root = ../webshop-volumes
+; kinds = volumes
+; guard = sole-holder
+; private = secrets/volume-*.tar.gz
+; capture is refused when GROBASE_ENV (environment or stack_file) is one of these
+; refuse_on_env = staging prod
+; stack_file = ../webshop/apps/stack/.stack
