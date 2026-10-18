@@ -17,7 +17,7 @@ defaults to `env secrets`: volumes are never implied. Start from [`vault42.conf.
 
 | command | what it does |
 |---|---|
-| `doctor` (`status`) | read-only checks of 42ctl, the environment, the session and your key |
+| `doctor` (`status`) | read-only checks of 42ctl, the environment, the session and your key; `--target NAME` limits the key check to that target, without it every target is checked |
 | `login` | log in with `FT_EMAIL`, `FT_PASSWORD`, `FT_TENANT` |
 | `keys ls` | who holds a key to each target's env |
 | `list`, `diff`, `find PATTERN` | read-only views of the vault |
@@ -91,6 +91,8 @@ environment variable, so `login` passes it as `--tenant NAME` in argv: a tenant 
 the process list; it is not a secret.
 
 ## doctor exit code
+
+The key check says who can fix a pending key (`pending-provision`: an active holder runs `env keys sync`; none active: ask an org admin). A target whose root directory is missing is a `WARN`, never a failure.
 
 5 when `FT_PASSPHRASE` is missing, else 2 when the config is invalid, else 1 when any check is
 `FAIL`, else 0. `FT_PASSWORD`, `FT_EMAIL` and `FT_TENANT` are `SKIP` when unset, so a CI run with only the

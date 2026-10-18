@@ -11,9 +11,12 @@
 # HTTP 401). A 42ctl that words them differently gets the generic "auth me failed" row, never a
 # false OK, because `auth me` failing is what decides. Caveat: the authority URL is the second
 # column of the `authority` line of `42ctl config show`; any other shape makes the network
-# explanation SKIP, never a FAIL.
+# explanation SKIP, never a FAIL. Caveat: the holder count in a pending-provision verdict is what
+# `env keys ls` reports as active, i.e. what was synced, not proof of who can decrypt (lib/volkey.sh
+# states the same); zero holders is a trustworthy "nobody", a positive count is only a hint.
 
 V42_DOC_FAILS=0
+V42_DOC_SEL=()
 
 _doc_row() {
   local status="$1" name="$2"
@@ -42,7 +45,14 @@ _doc_config() {
     return 1
   fi
   for t in "${V42_TARGETS[@]}"; do
-    _doc_row OK config "target $t: $(v42_cfg "$t" org)/$(v42_cfg "$t" project)/$(v42_cfg "$t" env), kinds $(v42_cfg "$t" kinds)"
+    local what root
+    what="target $t: $(v42_cfg "$t" org)/$(v42_cfg "$t" project)/$(v42_cfg "$t" env), kinds $(v42_cfg "$t" kinds)"
+    root="$(v42_cfg "$t" root)"
+    if [ -d "$root" ]; then
+      _doc_row OK config "$what"
+    else
+      _doc_row WARN config "$what; root $root does not exist (create it, or fix root)"
+    fi
   done
 }
 
@@ -73,6 +83,20 @@ _doc_creds() {
   return "$rc"
 }
 
+# The keys checks follow the global --target like every other command; the config rows stay one per
+# target so a broken target is still visible. v42_pick_targets is not used: it stops on a missing
+# root, and doctor must report that instead.
+_doc_scope() {
+  local marker="$V42_TARGET_FLAG."
+  V42_DOC_SEL=("${V42_TARGETS[@]}")
+  [ -n "$V42_TARGET_FLAG" ] || return 0
+  if [ -z "${V42_CFG[$marker]+x}" ]; then
+    usage_error "no target '$V42_TARGET_FLAG' in the config; targets: ${V42_TARGETS[*]}"
+    return 2
+  fi
+  V42_DOC_SEL=("$V42_TARGET_FLAG")
+}
+
 # A missing passphrase still leaves the session checkable: the operator gets every
 # diagnosis in one run instead of fixing them one exit at a time.
 _doc_skip_keyed() {
@@ -80,7 +104,7 @@ _doc_skip_keyed() {
   _doc_row SKIP keystore "needs FT_PASSPHRASE"
   _doc_session
   [ "${V42_CONFIG_RC:-0}" -ne 0 ] && return 0
-  for t in "${V42_TARGETS[@]}"; do
+  for t in "${V42_DOC_SEL[@]}"; do
     _doc_row SKIP "keys $t" "needs FT_PASSPHRASE"
   done
 }
@@ -140,21 +164,43 @@ _doc_keystore() {
   fi
 }
 
+# Says who can fix a pending key, because "pending-provision" alone does not: provisioning is an
+# `env keys sync` run by an active holder, so a target with none cannot be fixed by anyone in it.
+_doc_key_verdict() {
+  local t="$1" rows="$2" state="$3" o p e n
+  o="$(v42_cfg "$t" org)" p="$(v42_cfg "$t" project)" e="$(v42_cfg "$t" env)"
+  case "$state" in
+  active) _doc_row OK "keys $t" "your key is active" ;;
+  pending-provision)
+    n="$(v42_holders "$rows" | grep -c .)" || true
+    if [ "$n" -ge 1 ]; then
+      _doc_row FAIL "keys $t" "your key is pending-provision: one of the $n active holders runs 42ctl env keys sync --org $o --project $p --env $e"
+    else
+      _doc_row FAIL "keys $t" "your key is pending-provision and no member holds the $o/$p/$e key ($(grep -c . <<<"$rows") members, none active): env keys sync needs an active holder, so nobody can provision you; ask an org admin"
+    fi
+    ;;
+  pending-enrollment) _doc_row FAIL "keys $t" "your key is pending-enrollment: publish your public keys with 42ctl keys enroll --org $o, then an active holder runs env keys sync" ;;
+  absent) _doc_row FAIL "keys $t" "you are not a member of $o/$p/$e: an org admin adds you" ;;
+  *) _doc_row FAIL "keys $t" "your key is $state" ;;
+  esac
+}
+
 _doc_keys() {
-  local t rows me state
-  for t in "${V42_TARGETS[@]}"; do
+  local t rows me
+  for t in "${V42_DOC_SEL[@]}"; do
     if ! rows="$(v42_keys_rows "$t" 2>/dev/null)" || ! me="$(v42_my_account 2>/dev/null)"; then
       _doc_row WARN "keys $t" "could not read the key holders"
       continue
     fi
-    state="$(v42_my_state "$rows" "$me")"
-    if [ "$state" = active ]; then _doc_row OK "keys $t" "your key is active"; else _doc_row FAIL "keys $t" "your key is $state"; fi
+    _doc_key_verdict "$t" "$rows" "$(v42_my_state "$rows" "$me")"
   done
 }
 
 cmd_doctor() {
   local rc=0
   V42_DOC_FAILS=0
+  V42_DOC_SEL=()
+  if [ "${V42_CONFIG_RC:-0}" -eq 0 ]; then _doc_scope || return 2; fi
   _doc_ctl
   _doc_config || rc=2
   _doc_creds || { [ "$?" -ne 5 ] || rc=5; }

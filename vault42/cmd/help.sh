@@ -29,7 +29,7 @@ TXT
 
 _help_topic() {
   case "$1" in
-  doctor | status) echo "vault42 doctor — read-only checks. Exit 5 without FT_PASSPHRASE, 2 on an invalid config, 1 on any FAIL, else 0. FT_PASSWORD, FT_EMAIL and FT_TENANT are SKIP unless you run login." ;;
+  doctor | status) echo "vault42 doctor — read-only checks; --target NAME limits the key check to that target, without it every target is checked. Exit 5 without FT_PASSPHRASE, 2 on an invalid config, 1 on any FAIL, else 0. FT_PASSWORD, FT_EMAIL and FT_TENANT are SKIP unless you run login." ;;
   login) echo "vault42 login — reads FT_EMAIL, FT_PASSWORD and FT_TENANT (42ctl's own spellings are derived for the child only). FT_TENANT travels as --tenant in argv." ;;
   keys) echo "vault42 keys ls — the key holders of each selected target, with their state." ;;
   list) echo "vault42 list [--target NAME] — the vault's files, size and private flag." ;;

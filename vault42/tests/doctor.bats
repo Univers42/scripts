@@ -168,3 +168,79 @@ teardown() { assert_no_stdin_violation; }
   run "$V42" doctor
   assert_no_stdin_violation
 }
+
+# Two targets: t (env e, key active) and u (env f, root $R2). `keys.f` is what u's key rows say.
+two_targets() {
+  R2="$(make_repo "$BATS_TEST_TMPDIR/repo2")"
+  printf '\n[u]\norg = o2\nproject = p2\nenv = f\nroot = %s\n' "$R2" >>"$CONF"
+  printf "7704efb0-5a6a-4117-9cdd-a9265a8fc350 pending-provision\nbob pending-provision\n" >"$FAKE42/keys.f"
+}
+
+@test "doctor --target: only the selected target's keys are checked, so a broken other one does not fail" {
+  two_targets
+  run "$V42" --target t doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"OK   keys t"* ]]
+  [[ "$output" != *"keys u"* ]]
+  [[ "$output" == *"config         target u: o2/p2/f"* ]]
+}
+
+@test "doctor: without --target every target's keys are checked" {
+  two_targets
+  run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"OK   keys t"* ]]
+  [[ "$output" == *"FAIL keys u"* ]]
+}
+
+@test "doctor --target: the passphrase-less run skips only the selected target" {
+  two_targets
+  unset FT_PASSPHRASE
+  run "$V42" --target t doctor
+  [ "$status" -eq 5 ]
+  [[ "$output" == *"SKIP keys t"* ]]
+  [[ "$output" != *"SKIP keys u"* ]]
+}
+
+@test "doctor --target: an unknown target is a usage error naming the targets" {
+  two_targets
+  run --separate-stderr "$V42" --target nope doctor
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"no target 'nope' in the config; targets: t u"* ]]
+}
+
+@test "doctor: a target whose root is missing is a WARN row, not a failure" {
+  rm -rf "$R"
+  run "$V42" doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN config"*"target t: o/p/e, kinds"*"root $R does not exist (create it, or fix root)"* ]]
+  [[ "$output" == *"OK   keys t"* ]]
+}
+
+@test "doctor: pending-provision with active holders names the sync command to ask for" {
+  printf "7704efb0-5a6a-4117-9cdd-a9265a8fc350 pending-provision\nbob active\ncarol active\n" >"$FAKE42/keys.e"
+  run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL keys t"*"your key is pending-provision: one of the 2 active holders runs 42ctl env keys sync --org o --project p --env e"* ]]
+}
+
+@test "doctor: pending-provision with no active holder says nobody can provision you" {
+  printf "7704efb0-5a6a-4117-9cdd-a9265a8fc350 pending-provision\nbob pending-provision\n" >"$FAKE42/keys.e"
+  run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"your key is pending-provision and no member holds the o/p/e key (2 members, none active): env keys sync needs an active holder, so nobody can provision you; ask an org admin"* ]]
+}
+
+@test "doctor: pending-enrollment names keys enroll" {
+  printf "7704efb0-5a6a-4117-9cdd-a9265a8fc350 pending-enrollment\n" >"$FAKE42/keys.e"
+  run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"your key is pending-enrollment: publish your public keys with 42ctl keys enroll --org o, then an active holder runs env keys sync"* ]]
+}
+
+@test "doctor: a caller who is not a member is told to ask an org admin" {
+  printf "bob active\n" >"$FAKE42/keys.e"
+  run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"you are not a member of o/p/e: an org admin adds you"* ]]
+}
