@@ -33,3 +33,12 @@ free_mb() {
 
 # count_lines TEXT: the number of non-empty lines, 0 for the empty string.
 count_lines() { grep -c . <<<"$1" || true; }
+
+# space_guard DIR BYTES FLOOR_MB: status 1 unless BYTES fit at DIR while FLOOR_MB stays free.
+space_guard() {
+  local dir="$1" bytes="$2" floor="$3" free
+  free="$(free_mb "$dir")"
+  [ "$bytes" -le $(((free - floor) * 1048576)) ] && return 0
+  note "need $(human_bytes "$bytes") at $dir but only $free MB is free and $floor MB is kept back; free space first"
+  return 1
+}
