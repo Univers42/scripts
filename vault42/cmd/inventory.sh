@@ -46,7 +46,7 @@ cmd_diff() {
   v42_cred_require passphrase || return 5
   v42_scoped_targets || return 2
   for t in "${V42_SEL[@]}"; do
-    table="$(v42_diff_table "$t" $V42_KINDS)" || return 1
+    table="$(v42_diff_table "$t" "${V42_KINDS[@]}")" || return 1
     printf '[%s] %s\n' "$t" "$(v42_diff_counts "$table")"
     [ -z "$table" ] || printf '%s\n' "$table"
     if grep -qE '^(-|~) ' <<<"$table"; then

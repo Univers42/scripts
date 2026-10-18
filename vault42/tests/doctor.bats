@@ -95,7 +95,10 @@ teardown() { assert_no_stdin_violation; }
   for pair in "dns:DNS cannot resolve" "refused:refused the connection" "tls:TLS handshake" "timeout:did not answer within 8 seconds" "http:503:answered HTTP 503"; do
     mode="${pair%%:*}"
     text="${pair#*:}"
-    [ "$mode" != http ] || { mode=http:503; text="answered HTTP 503"; }
+    [ "$mode" != http ] || {
+      mode=http:503
+      text="answered HTTP 503"
+    }
     FAKE_CURL_MODE="$mode" run "$V42" doctor
     [ "$status" -eq 1 ]
     [[ "$output" == *"$text"* ]]

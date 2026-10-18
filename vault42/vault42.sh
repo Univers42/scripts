@@ -7,6 +7,7 @@
 # Caveat: global flags are recognised anywhere on the line, so a command argument that is literally
 # `--target` cannot be passed through; none of the commands takes one.
 
+# shellcheck disable=SC2034 # V42_TARGET_FLAG and V42_KINDS are read by lib/targets.sh, which shellcheck checks apart
 set -uo pipefail
 
 _v42_self_dir() {
@@ -21,7 +22,7 @@ _v42_self_dir() {
 
 V42_HOME="$(_v42_self_dir)"
 for _m in common state scan private envfile seedsums lock volumes config creds ctl hooks kinds remote \
-  diffs gitignored stage netdiag push; do
+  diffs gitignored stage netdiag targets push; do
   # shellcheck source=/dev/null
   . "$V42_HOME/lib/$_m.sh"
 done
@@ -71,43 +72,6 @@ _v42_parse_globals() {
   done
 }
 
-# v42_pick_targets: V42_SEL = the --target, or every target; status 2 on an unknown name.
-v42_pick_targets() {
-  V42_SEL=()
-  if [ -z "$V42_TARGET_FLAG" ]; then
-    mapfile -t V42_SEL < <(v42_targets)
-    return 0
-  fi
-  local marker="$V42_TARGET_FLAG."
-  if [ -z "${V42_CFG[$marker]+x}" ]; then
-    usage_error "no target '$V42_TARGET_FLAG' in the config; targets: $(v42_targets | paste -sd' ')"
-    return 2
-  fi
-  V42_SEL=("$V42_TARGET_FLAG")
-}
-
-# v42_scoped_targets: V42_SEL narrowed to the targets the selected kinds touch; status 2 when none.
-v42_scoped_targets() {
-  local t
-  local -a kept=()
-  v42_pick_targets || return 2
-  for t in "${V42_SEL[@]}"; do
-    [ "$(v42_kind_scope "$t" $V42_KINDS)" = none ] || kept+=("$t")
-  done
-  V42_SEL=("${kept[@]}")
-  [ "${#V42_SEL[@]}" -gt 0 ] || usage_error "no target holds the selected kinds ($V42_KINDS); see: vault42 config show"
-}
-
-# v42_single_target: V42_T = the one target a state-changing command acts on; status 2 when ambiguous.
-v42_single_target() {
-  v42_scoped_targets || return 2
-  if [ "${#V42_SEL[@]}" -ne 1 ]; then
-    usage_error "this command acts on one target; pick one with --target (${V42_SEL[*]})"
-    return 2
-  fi
-  V42_T="${V42_SEL[0]}"
-}
-
 _v42_dispatch() {
   local cmd="${1:-help}"
   shift || true
@@ -135,7 +99,7 @@ main() {
     return
     ;;
   esac
-  V42_KINDS="$(v42_kinds_select "${V42_KIND_ARGS[@]}")" || return 2
+  read -ra V42_KINDS <<<"$(v42_kinds_select "${V42_KIND_ARGS[@]}")" || return 2
   V42_CONFIG_RC=0
   v42_config_load "$(v42_config_path "$V42_CONFIG_FLAG")" || V42_CONFIG_RC=$?
   case "${V42_REST[0]}" in
