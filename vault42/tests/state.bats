@@ -81,3 +81,11 @@ tmp_run() {
   run bash -c '. "$1"; a() { echo a; }; b() { echo b; }; v42_on_exit a; v42_on_exit b' _ "$LIB"
   [ "$output" = $'b\na' ]
 }
+
+@test "C4: outside git no scratch dir is made: ROOT/.vault42-tmp would sit inside the scanned tree" {
+  mkdir -p "$BATS_TEST_TMPDIR/plain"
+  run --separate-stderr bash -c '. "$1"; v42_mktmp "$2"' _ "$LIB" "$BATS_TEST_TMPDIR/plain"
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *git* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/plain/.vault42-tmp" ]
+}

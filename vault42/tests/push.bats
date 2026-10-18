@@ -364,3 +364,16 @@ pushed() { [ -s "$FAKE42/push.log" ]; }
   [ "$status" -eq 1 ]
   [ ! -e "$FAKE42/push.log" ]
 }
+
+@test "C4: a file push outside git is refused: the scratch dir would sit inside the scanned tree" {
+  local plain="$BATS_TEST_TMPDIR/plain"
+  mkdir -p "$plain"
+  printf 'AAAA' >"$plain/a.env"
+  printf 'BBBB' >"$plain/b.env"
+  sed -i "s|^root = .*|root = $plain|" "$CONF"
+  run --separate-stderr "$V42" push --yes b.env
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *git* ]]
+  [ ! -e "$plain/.vault42-tmp" ]
+  [ ! -e "$FAKE42/push.log" ]
+}

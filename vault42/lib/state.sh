@@ -7,6 +7,7 @@
 #                         and capture state live here and nowhere else.
 #   v42_mktmp ROOT        sets V42_TMP to a fresh mode-700 directory under <common dir>/vault42-tmp
 #                         (never /tmp: it holds restored secrets), removed on EXIT INT TERM HUP.
+#                         Status 1 outside git: the only other home is inside the scanned tree.
 #   v42_on_exit FUNCTION  run FUNCTION (no arguments) at exit, last registered first.
 #
 # The git common dir is shared by every linked worktree and a submodule keeps its own under the
@@ -65,7 +66,12 @@ _v42_rm_tmp_dirs() {
 
 v42_mktmp() {
   local root="$1" base
-  if base="$(v42_common_dir "$root")"; then base="$base/vault42-tmp"; else base="$root/.vault42-tmp"; fi
+  # Outside git the only home would be inside ROOT, where the scan would upload what is restored there.
+  base="$(v42_common_dir "$root")" || {
+    printf 'vault42: %s is not in a git repository, so there is nowhere outside the scanned tree to restore the vault for a byte comparison; run it from a git checkout\n' "$root" >&2
+    return 1
+  }
+  base="$base/vault42-tmp"
   (umask 077 && mkdir -p "$base") && chmod 700 "$base" || return 1
   V42_TMP="$(mktemp -d "$base/run.XXXXXX")" || return 1
   chmod 700 "$V42_TMP"
