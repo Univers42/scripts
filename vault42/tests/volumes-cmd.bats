@@ -174,7 +174,8 @@ killed_capture_record() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"previous capture was killed"* ]]
   [ ! -e "$R/.git/vault42/stopped.t" ]
-  [ ! -e "$BATS_TEST_TMPDIR/wt/.git/vault42" ]
+  [ -f "$BATS_TEST_TMPDIR/wt/.git" ]
+  [ ! -e "$(git -C "$BATS_TEST_TMPDIR/wt" rev-parse --absolute-git-dir)/vault42" ]
   [ "$(running)" = "c1 pg_data c2 redis_data" ]
 }
 

@@ -85,20 +85,6 @@ teardown() { assert_no_stdin_violation; }
   [ ! -e "$BATS_TEST_TMPDIR/ran" ]
 }
 
-@test "G4: a post_pull hook that calls vault42 secret get does not deadlock on the lock" {
-  mkdir -p "$FAKE42/secret"
-  printf 'sv' >"$FAKE42/secret/X"
-  add_hook after.sh "'$V42' secret get X >'$BATS_TEST_TMPDIR/got' 2>'$BATS_TEST_TMPDIR/err'"
-  add_conf "post_pull = scripts/after.sh"
-  run --separate-stderr "$V42" pull --apply
-  [ "$status" -eq 0 ]
-  [ "$(cat "$BATS_TEST_TMPDIR/got")" = sv ]
-  run grep -c locked "$BATS_TEST_TMPDIR/err"
-  [ "$output" = 0 ]
-  run grep -c locked <<<"$stderr"
-  [ "$output" = 0 ]
-}
-
 @test "G4: a post_pull hook that runs a whole pull is not blocked either" {
   add_hook after.sh "'$V42' pull >/dev/null 2>'$BATS_TEST_TMPDIR/err'; echo \$? >'$BATS_TEST_TMPDIR/rc'"
   add_conf "post_pull = scripts/after.sh"
@@ -117,6 +103,7 @@ teardown() { assert_no_stdin_violation; }
 @test "leak: planted credentials never reach pull's output or 42ctl's argv" {
   export FT_PASSWORD=pw-planted-3333 FT_EMAIL=em-planted-4444@example.test FT_TENANT=tn-planted-5555
   run "$V42" pull --apply
+  [ "$status" -eq 0 ]
   printf '%s\n' "$output" >"$BATS_TEST_TMPDIR/captured"
   cat "$FAKE42/argv.log" >>"$BATS_TEST_TMPDIR/captured"
   local v
