@@ -11,6 +11,9 @@
 #                               none of the target's kinds
 #   v42_kind_only TARGET KIND…  the `--only` patterns that restrict a pull to the selected kinds; nothing
 #                               when the scope is full
+#   v42_kind_leaves_out TARGET KIND SELECTED…
+#                               status 0 when TARGET holds KIND and SELECTED skips it (a pull of
+#                               only `secrets` leaves the env files unrestored)
 #   v42_kind_require_full TARGET KIND…
 #                               status 2 unless the scope is full: `env push` REPLACES the vault's
 #                               whole tree, so a push of part of a target would delete the rest
@@ -74,6 +77,16 @@ v42_kind_only() {
   local target="$1" kind
   [ "$(v42_kind_scope "$@")" = partial ] || return 0
   for kind in $(_v42_kind_common "$@"); do v42_kind_patterns "$kind"; done
+}
+
+v42_kind_leaves_out() {
+  local target="$1" kind="$2" own
+  shift 2
+  for own in $(v42_cfg "$target" kinds); do
+    [ "$own" = "$kind" ] || continue
+    [[ " $(_v42_kind_common "$target" "$@") " == *" $kind "* ]] || return 0
+  done
+  return 1
 }
 
 v42_kind_require_full() {

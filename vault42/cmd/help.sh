@@ -14,7 +14,7 @@ commands:
   list              the files the vault holds
   diff              what a push or a pull would change, by size
   find PATTERN      which targets hold a file matching PATTERN
-  pull [--apply] [--only PATH]...   preview, or restore, the vault's files (post_pull runs after --apply, not with --only)
+  pull [--apply] [--only PATH]...   preview, or restore, the vault's files (post_pull runs after --apply; partial pulls skip it)
   push [--yes] [FILE...]            replace the vault's tree with this checkout, or push named files
   secret get|set PATH               read or write one vault secret (set reads stdin)
   config show       the effective configuration

@@ -37,6 +37,17 @@ setup() {
   [ "$(v42_kind_scope vols volumes)" = full ]
 }
 
+@test "leaves_out: true only when the target holds the kind and the selection skips it" {
+  v42_kind_leaves_out both env secrets
+  v42_kind_leaves_out both env volumes
+  run v42_kind_leaves_out both env env secrets
+  [ "$status" -eq 1 ]
+  run v42_kind_leaves_out vols env env secrets
+  [ "$status" -eq 1 ]
+  run v42_kind_leaves_out envonly secrets env
+  [ "$status" -eq 1 ]
+}
+
 @test "C6: pull of one kind maps to --only patterns; a full selection maps to none" {
   run v42_kind_only both env
   [ "$output" = '*.env*' ]

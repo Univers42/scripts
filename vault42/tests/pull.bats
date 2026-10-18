@@ -101,7 +101,7 @@ teardown() { assert_no_stdin_violation; }
   [ "$status" -eq 0 ]
   [ "$(cat "$R/b.env")" = BBBB ]
   [ ! -e "$BATS_TEST_TMPDIR/ran" ]
-  [[ "$output" == *"post_pull not run: --only restores the files you named"* ]]
+  [[ "$output" == *"post_pull not run: this pull restored only part of the environment"* ]]
   [[ "$output" == *"run it yourself if you need it: scripts/after.sh"* ]]
 }
 
@@ -110,6 +110,24 @@ teardown() { assert_no_stdin_violation; }
   run "$V42" pull --apply --only b.env
   [ "$status" -eq 2 ]
   [ ! -e "$R/b.env" ]
+}
+
+@test "pull --apply --kind secrets restores no env file, so it skips post_pull and says how to run it" {
+  add_hook after.sh "touch '$BATS_TEST_TMPDIR/ran'"
+  add_conf "post_pull = scripts/after.sh"
+  # The fake 42ctl fails a pull when any --only pattern matches nothing, and the secrets kind sends
+  # one pattern per secrets location, so the vault needs a file under each.
+  mkdir -p "$R/x/secrets" "$R/.secrets" "$R/x/.secrets"
+  printf 'S' | tee "$R/x/secrets/s" "$R/.secrets/s" "$R/x/.secrets/s" >"$R/p.secrets"
+  printf BBBB >"$R/b.env"
+  "$V42" push --yes --share .secrets/s --share x/.secrets/s --share x/secrets/s >/dev/null 2>&1
+  rm -f "$R/b.env" "$R/x/secrets/s"
+  run "$V42" --kind secrets pull --apply
+  [ "$status" -eq 0 ]
+  [ -e "$R/x/secrets/s" ]
+  [ ! -e "$BATS_TEST_TMPDIR/ran" ]
+  [[ "$output" == *"post_pull not run: this pull restored only part of the environment"* ]]
+  [[ "$output" == *"run it yourself if you need it: scripts/after.sh"* ]]
 }
 
 @test "a kind-scoped pull builds its own --only list and still runs post_pull" {

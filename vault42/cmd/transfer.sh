@@ -223,11 +223,12 @@ _pull_one() {
   }
   # The hook may run vault42 itself (secret get), so it must not meet this run's lock.
   vault42_unlock_lock
-  # The hook rebuilds from a whole restored environment; a user --only restores a few files, and
-  # running it then re-pointed a live .env.local at the wrong backend (2026-10-18). A kind's own
-  # --only list is not the user's, so it keeps the hook.
-  if [ "${#V42_PULL_ONLY[@]}" -gt 0 ]; then
-    [ -z "$hook" ] || note "post_pull not run: --only restores the files you named, not the environment the hook rebuilds from; run it yourself if you need it: $hook"
+  # The hook rebuilds from the restored env files; a pull that restored only part of them re-pointed a
+  # live .env.local at the wrong backend (2026-10-18). A user --only restores a few files, and a
+  # --kind selection without env restores none, so both skip it. A kind filter's own --only list is
+  # no reason on its own: --kind env restores every env file and keeps the hook.
+  if [ "${#V42_PULL_ONLY[@]}" -gt 0 ] || v42_kind_leaves_out "$target" env "${V42_KINDS[@]}"; then
+    [ -z "$hook" ] || note "post_pull not run: this pull restored only part of the environment (--only, or kinds without env); run it yourself if you need it: $hook"
     return 0
   fi
   v42_hook_run "$root" "$hook" hook || {
