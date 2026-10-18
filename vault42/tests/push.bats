@@ -326,3 +326,34 @@ pushed() { [ -s "$FAKE42/push.log" ]; }
   grep -qx apps/grobase/secrets/jwt.key "$FAKE42/private.e"
   ! grep -qx .secrets/x "$FAKE42/private.e"
 }
+
+@test "re-seal: a file already pushed shared and now configured private is pushed, not 'nothing to push'" {
+  "$V42" push --yes
+  ! grep -qx a.env "$FAKE42/private.e"
+  rm -f "$FAKE42/push.log"
+  add_conf "private_add = a.env"
+  run "$V42" push --yes
+  [ "$status" -eq 0 ]
+  [ -s "$FAKE42/push.log" ]
+  grep -qx a.env "$FAKE42/private.e"
+}
+
+@test "team-only flags: personal mode refuses a FILE, --drop, --share and --private with exit 2" {
+  add_conf "mode = personal"
+  local args
+  for args in "b.env" "--drop a.env" "--share x" "--private y"; do
+    # shellcheck disable=SC2086 # the word splitting of $args is the point
+    run --separate-stderr "$V42" push --yes $args
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *personal* ]]
+    [ ! -e "$FAKE42/push.log" ]
+  done
+}
+
+@test "team-only flags: the personal fallback route refuses them too, before pushing" {
+  printf 'other active\n' >"$FAKE42/keys.e"
+  add_conf "personal_fallback = yes"
+  run --separate-stderr "$V42" push --yes --personal b.env
+  [ "$status" -eq 2 ]
+  [ ! -e "$FAKE42/push.log" ]
+}

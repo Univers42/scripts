@@ -45,6 +45,22 @@ _push_table() {
   fi
 }
 
+# FILE, --drop, --share and --private only mean something to a team push. The personal and fallback
+# routes run `42ctl push`, which sends the whole tree: honouring none of them silently is how a push
+# of one file once sent everything.
+_push_team_only() {
+  local route="$1" used=""
+  [ "$route" != team ] || return 0
+  [ "${#V42_PUSH_FILES[@]}" -eq 0 ] || used="$used FILE"
+  [ "${#V42_PUSH_DROPS[@]}" -eq 0 ] || used="$used --drop"
+  [ "${#V42_PUSH_SHARE[@]}" -eq 0 ] || used="$used --share"
+  [ "${#V42_PUSH_PRIVATE[@]}" -eq 0 ] || used="$used --private"
+  [ -z "$used" ] || {
+    note "refusing:$used apply only to a team push; the $route push sends the whole tree and honours none of them"
+    return 2
+  }
+}
+
 _push_exec() {
   local target="$1" pattern
   local -a args=()
@@ -87,6 +103,7 @@ _push_prepare() {
     return 1
   }
   v42_push_route "$target" || return 1
+  _push_team_only "$V42_ROUTE" || return 2
   V42_PUSH_TABLE=""
   if [ "$V42_ROUTE" = team ]; then
     [ "${#V42_PUSH_FILES[@]}" -eq 0 ] || _push_check_files "$root" || return $?
@@ -99,8 +116,25 @@ _push_prepare() {
   _push_authorise
 }
 
+# Status 0 when a push still has something to change; 10 when it has not (the caller stops with 0).
+# An empty table says the files match, not that their sealing does: `private_add = a.env` after a
+# shared push must still re-seal a.env.
+_push_nothing_to_change() {
+  local rc=0
+  [ -z "$V42_PUSH_TABLE" ] || return 0
+  v42_privacy_differs "$1" || rc=$?
+  case "$rc" in
+  0) note "the files match but the vault's private set is not the plan: pushing to re-seal" ;;
+  1)
+    note "the vault already matches this checkout: nothing to push"
+    return 10
+    ;;
+  *) return 1 ;;
+  esac
+}
+
 _push_run() {
-  local target="$1" again
+  local target="$1" again rc
   _push_prepare "$target" || return $?
   if [ "$V42_ROUTE" = team ]; then
     again="$(_push_table "$target")" || return 1
@@ -108,9 +142,10 @@ _push_run() {
       note "the vault changed while you were deciding: nothing was pushed; review again"
       return 1
     }
-    [ -n "$V42_PUSH_TABLE" ] || {
-      note "the vault already matches this checkout: nothing to push"
-      return 0
+    _push_nothing_to_change "$target" || {
+      rc=$?
+      [ "$rc" -ne 10 ] || return 0
+      return "$rc"
     }
   fi
   _push_exec "$target" || {
@@ -150,6 +185,7 @@ cmd_push() {
     shift
   done
   v42_single_target || return 2
+  _push_team_only "$(v42_cfg "$V42_T" mode)" || return 2
   v42_kind_require_full "$V42_T" "${V42_KINDS[@]}" || return 2
   v42_hook_check "$(v42_cfg "$V42_T" root)" "$(v42_cfg "$V42_T" pre_push)" || return 2
   v42_cred_require passphrase || return 5

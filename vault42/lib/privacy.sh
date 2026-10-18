@@ -9,6 +9,7 @@
 #                             V42_EXPECT_PRIVATE (the local paths those patterns select). Status 1
 #                             naming every secrets/ file (at any depth) nobody classified, and
 #                             a staged archive the scan or the patterns would not carry.
+#   v42_privacy_differs TARGET status 0 when the vault's private set is not the plan (1 same, 2 unreadable)
 #   v42_privacy_verify TARGET status 1 naming every difference between V42_EXPECT_PRIVATE and the
 #                             vault's private set, in both directions
 #
@@ -22,6 +23,8 @@
 
 declare -ga V42_PUSH_PRIVATE=() V42_PUSH_SHARE=() V42_PUSH_PATTERNS=()
 V42_EXPECT_PRIVATE=""
+V42_PRIV_MISSING=""
+V42_PRIV_EXTRA=""
 
 # A staged archive the scan does not take is never uploaded; one the patterns do not select is
 # uploaded shared. Either way the push would report success with the files unprotected or missing.
@@ -65,12 +68,25 @@ v42_privacy_plan() {
   _v42_privacy_archives_travel "$target" "$paths"
 }
 
-v42_privacy_verify() {
-  local actual missing extra
+# Sets V42_PRIV_MISSING (expected private, stored shared) and V42_PRIV_EXTRA (stored private, planned
+# shared); status 1 when the vault cannot be read.
+_v42_privacy_delta() {
+  local actual
   actual="$(v42_remote_private "$1")" || return 1
-  missing="$(LC_ALL=C comm -23 <(grep . <<<"$V42_EXPECT_PRIVATE" || true) <(grep . <<<"$actual" || true) | paste -sd' ')"
-  extra="$(LC_ALL=C comm -13 <(grep . <<<"$V42_EXPECT_PRIVATE" || true) <(grep . <<<"$actual" || true) | paste -sd' ')"
-  [ -z "$missing" ] || note "possible disclosure: $missing — expected private (sealed to you alone) but the vault holds them SHARED; treat the key holders as readers"
-  [ -z "$extra" ] || note "possible disclosure: $extra — listed private by the vault but planned shared; the plan and the vault disagree about who reads them"
-  [ -z "$missing$extra" ]
+  V42_PRIV_MISSING="$(LC_ALL=C comm -23 <(grep . <<<"$V42_EXPECT_PRIVATE" || true) <(grep . <<<"$actual" || true) | paste -sd' ')"
+  V42_PRIV_EXTRA="$(LC_ALL=C comm -13 <(grep . <<<"$V42_EXPECT_PRIVATE" || true) <(grep . <<<"$actual" || true) | paste -sd' ')"
+}
+
+# Status 0 when the vault's private set differs from the plan, 1 when it matches, 2 when unreadable.
+# Quiet: it decides whether an otherwise empty push still has something to change (a re-seal).
+v42_privacy_differs() {
+  _v42_privacy_delta "$1" || return 2
+  [ -n "$V42_PRIV_MISSING$V42_PRIV_EXTRA" ]
+}
+
+v42_privacy_verify() {
+  _v42_privacy_delta "$1" || return 1
+  [ -z "$V42_PRIV_MISSING" ] || note "possible disclosure: $V42_PRIV_MISSING — expected private (sealed to you alone) but the vault holds them SHARED; treat the key holders as readers"
+  [ -z "$V42_PRIV_EXTRA" ] || note "possible disclosure: $V42_PRIV_EXTRA — listed private by the vault but planned shared; the plan and the vault disagree about who reads them"
+  [ -z "$V42_PRIV_MISSING$V42_PRIV_EXTRA" ]
 }
