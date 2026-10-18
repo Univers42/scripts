@@ -29,18 +29,18 @@ TXT
 
 _help_topic() {
   case "$1" in
-    doctor | status) echo "vault42 doctor — read-only checks. Exit 5 without FT_PASSPHRASE, 2 on an invalid config, 1 on any FAIL, else 0. FT_PASSWORD, FT_EMAIL and FT_TENANT are SKIP unless you run login." ;;
-    login) echo "vault42 login — reads FT_EMAIL, FT_PASSWORD and FT_TENANT (42ctl's own spellings are derived for the child only). FT_TENANT travels as --tenant in argv." ;;
-    keys) echo "vault42 keys ls — the key holders of each selected target, with their state." ;;
-    list) echo "vault42 list [--target NAME] — the vault's files, size and private flag." ;;
-    diff) echo "vault42 diff — +local only, -vault only, ~size differs. Size only: a same-size edit is not shown." ;;
-    find) echo "vault42 find PATTERN — shell-style pattern over the vault's paths of every target." ;;
-    pull) echo "vault42 pull [--apply] [--only PATH]... — a preview unless --apply. --kind limits it. Fixes print as: vault42 pull --apply --only PATH." ;;
-    push) echo "vault42 push [--yes] [--personal] [--share PATH] [--private PAT] [FILE...] — replaces the target's tree. With FILE, only those files are pushed and BYTES and MODE are compared first." ;;
-    secret) echo "vault42 secret get PATH | vault42 secret set PATH < value" ;;
-    config) echo "vault42 config show — the effective, parsed configuration." ;;
-    volumes) echo "vault42 volumes list | capture | restore [--all] — needs a target with kinds = volumes." ;;
-    *) usage_error "no help for '$1'; run: vault42 help" ;;
+  doctor | status) echo "vault42 doctor — read-only checks. Exit 5 without FT_PASSPHRASE, 2 on an invalid config, 1 on any FAIL, else 0. FT_PASSWORD, FT_EMAIL and FT_TENANT are SKIP unless you run login." ;;
+  login) echo "vault42 login — reads FT_EMAIL, FT_PASSWORD and FT_TENANT (42ctl's own spellings are derived for the child only). FT_TENANT travels as --tenant in argv." ;;
+  keys) echo "vault42 keys ls — the key holders of each selected target, with their state." ;;
+  list) echo "vault42 list [--target NAME] — the vault's files, size and private flag." ;;
+  diff) echo "vault42 diff — +local only, -vault only, ~size differs. Size only: a same-size edit is not shown." ;;
+  find) echo "vault42 find PATTERN — shell-style pattern over the vault's paths of every target." ;;
+  pull) echo "vault42 pull [--apply] [--only PATH]... — a preview unless --apply. --kind limits it. Fixes print as: vault42 pull --apply --only PATH." ;;
+  push) echo "vault42 push [--yes] [--personal] [--share PATH] [--private PAT] [FILE...] — replaces the target's tree. With FILE, only those files are pushed and BYTES and MODE are compared first." ;;
+  secret) echo "vault42 secret get PATH | vault42 secret set PATH < value" ;;
+  config) echo "vault42 config show — the effective, parsed configuration." ;;
+  volumes) echo "vault42 volumes list | capture | restore [--all] — needs a target with kinds = volumes." ;;
+  *) usage_error "no help for '$1'; run: vault42 help" ;;
   esac
 }
 

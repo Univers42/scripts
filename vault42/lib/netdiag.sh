@@ -16,11 +16,11 @@ v42_net_explain() {
   code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 "$1" 2>/dev/null </dev/null)"
   rc=$?
   case "$rc" in
-    0) printf 'the authority answered HTTP %s, so the network is fine' "$code" ;;
-    6) printf 'DNS cannot resolve the authority host' && return 1 ;;
-    7) printf 'the authority refused the connection (nothing listening, or a firewall)' && return 1 ;;
-    28) printf 'the authority did not answer within 8 seconds (timeout)' && return 1 ;;
-    35 | 51 | 58 | 60 | 77) printf 'the TLS handshake with the authority failed (curl exit %s)' "$rc" && return 1 ;;
-    *) printf 'curl exit %s reaching the authority' "$rc" && return 1 ;;
+  0) printf 'the authority answered HTTP %s, so the network is fine' "$code" ;;
+  6) printf 'DNS cannot resolve the authority host' && return 1 ;;
+  7) printf 'the authority refused the connection (nothing listening, or a firewall)' && return 1 ;;
+  28) printf 'the authority did not answer within 8 seconds (timeout)' && return 1 ;;
+  35 | 51 | 58 | 60 | 77) printf 'the TLS handshake with the authority failed (curl exit %s)' "$rc" && return 1 ;;
+  *) printf 'curl exit %s reaching the authority' "$rc" && return 1 ;;
   esac
 }

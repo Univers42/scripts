@@ -63,8 +63,8 @@ many_volumes() {
   local i
   for i in $(seq -w 1 12); do
     case "$i" in
-      03 | 05 | 11) mkvol "vol-$i" ;;
-      *) filled_volume "vol-$i" ;;
+    03 | 05 | 11) mkvol "vol-$i" ;;
+    *) filled_volume "vol-$i" ;;
     esac
   done
   filled_volume cache_gobuild

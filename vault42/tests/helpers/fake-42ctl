@@ -86,10 +86,10 @@ list_files() {
   while read -r size p; do
     [ -n "$p" ] || continue
     case "$fmt" in
-      '{{.Path}}') printf '%s\n' "$p" ;;
-      '{{.Size}}') printf '%s\n' "$size" ;;
-      '{{.Size}} {{.Private}} {{.Path}}') printf '%s %s %s\n' "$size" "$(file_has "$S/private.$envname" "$p" && echo true || echo false)" "$p" ;;
-      *) printf '%s %s\n' "$size" "$p" ;;
+    '{{.Path}}') printf '%s\n' "$p" ;;
+    '{{.Size}}') printf '%s\n' "$size" ;;
+    '{{.Size}} {{.Private}} {{.Path}}') printf '%s %s %s\n' "$size" "$(file_has "$S/private.$envname" "$p" && echo true || echo false)" "$p" ;;
+    *) printf '%s %s\n' "$size" "$p" ;;
     esac
   done <"$f"
   if [ -e "$S/net-flip" ] && [ ! -e "$S/net-flipped" ]; then
@@ -158,62 +158,62 @@ env_push() {
 }
 
 case "${1:-}" in
-  --version) echo "42ctl $(cat "$S/version" 2>/dev/null || echo 0.1.16)" ;;
-  config)
-    echo "profile = default"
-    echo "authority = https://authority.example.test/api"
+--version) echo "42ctl $(cat "$S/version" 2>/dev/null || echo 0.1.16)" ;;
+config)
+  echo "profile = default"
+  echo "authority = https://authority.example.test/api"
+  ;;
+push) echo "push $*" >>"$S/push.log" ;;
+auth)
+  case "$2" in
+  me)
+    [ ! -e "$S/net-down" ] || fail "Error: error sending request: dns error: failed to lookup address"
+    [ "$(cat "$S/session" 2>/dev/null)" != dead ] || fail "Error: HTTP 401 session expired"
+    echo "account 7704efb0-5a6a-4117-9cdd-a9265a8fc350 me@example.test"
     ;;
-  push) echo "push $*" >>"$S/push.log" ;;
-  auth)
-    case "$2" in
-      me)
-        [ ! -e "$S/net-down" ] || fail "Error: error sending request: dns error: failed to lookup address"
-        [ "$(cat "$S/session" 2>/dev/null)" != dead ] || fail "Error: HTTP 401 session expired"
-        echo "account 7704efb0-5a6a-4117-9cdd-a9265a8fc350 me@example.test"
-        ;;
-      status)
-        if [ -e "$S/nologin" ]; then
-          echo "not logged in"
-          exit 1
-        fi
-        if [ -e "$S/nocontract" ]; then echo "logged in"; else echo "logged in; contract $(cat "$S/contract" 2>/dev/null || echo univers42)"; fi
-        ;;
-      whoami)
-        [ ! -e "$S/locked" ] || fail "Error: keystore: could not unlock"
-        [ -n "${FT_PASSPHRASE:-}" ] || fail "Error: keystore: could not unlock (no passphrase)"
-        [ ! -f "$S/passphrase" ] || [ "$FT_PASSPHRASE" = "$(cat "$S/passphrase")" ] || fail "Error: keystore: could not unlock"
-        echo me
-        ;;
-      login)
-        [ ! -e "$S/login-fail" ] || fail "Error: login failed"
-        has --password && [ -n "${FT_PASSWORD:-}" ] && [ -n "${FT_LOGIN_EMAIL:-}" ] || fail "Error: --password needs FT_PASSWORD and an email"
-        echo alive >"$S/session"
-        ;;
+  status)
+    if [ -e "$S/nologin" ]; then
+      echo "not logged in"
+      exit 1
+    fi
+    if [ -e "$S/nocontract" ]; then echo "logged in"; else echo "logged in; contract $(cat "$S/contract" 2>/dev/null || echo univers42)"; fi
+    ;;
+  whoami)
+    [ ! -e "$S/locked" ] || fail "Error: keystore: could not unlock"
+    [ -n "${FT_PASSPHRASE:-}" ] || fail "Error: keystore: could not unlock (no passphrase)"
+    [ ! -f "$S/passphrase" ] || [ "$FT_PASSPHRASE" = "$(cat "$S/passphrase")" ] || fail "Error: keystore: could not unlock"
+    echo me
+    ;;
+  login)
+    [ ! -e "$S/login-fail" ] || fail "Error: login failed"
+    has --password && [ -n "${FT_PASSWORD:-}" ] && [ -n "${FT_LOGIN_EMAIL:-}" ] || fail "Error: --password needs FT_PASSWORD and an email"
+    echo alive >"$S/session"
+    ;;
+  esac
+  ;;
+env)
+  case "$2" in
+  ls)
+    [ ! -e "$S/envs-fail" ] || fail "Error: HTTP 500"
+    echo "ID NAME"
+    if [ -f "$S/envs" ]; then cat "$S/envs"; else for k in "$S"/keys.*; do [ -e "$k" ] && echo "id-${k##*/keys.} ${k##*/keys.}"; done; fi
+    ;;
+  keys)
+    [ ! -e "$S/keys-fail" ] || fail "Error: HTTP 401 unauthorized"
+    [ -f "$S/keys.$envname" ] || fail "Error: environment '$envname' not found"
+    cat "$S/keys.$envname"
+    ;;
+  files) list_files ;;
+  pull) env_pull ;;
+  push) env_push ;;
+  secret)
+    key="${args[${#args[@]} - 1]}"
+    case "$3" in
+    get) cat "$S/secret/$key" 2>/dev/null || fail "Error: no secret $key" ;;
+    set) mkdir -p "$(dirname "$S/secret/$key")" && cat >"$S/secret/$key" ;;
     esac
     ;;
-  env)
-    case "$2" in
-      ls)
-        [ ! -e "$S/envs-fail" ] || fail "Error: HTTP 500"
-        echo "ID NAME"
-        if [ -f "$S/envs" ]; then cat "$S/envs"; else for k in "$S"/keys.*; do [ -e "$k" ] && echo "id-${k##*/keys.} ${k##*/keys.}"; done; fi
-        ;;
-      keys)
-        [ ! -e "$S/keys-fail" ] || fail "Error: HTTP 401 unauthorized"
-        [ -f "$S/keys.$envname" ] || fail "Error: environment '$envname' not found"
-        cat "$S/keys.$envname"
-        ;;
-      files) list_files ;;
-      pull) env_pull ;;
-      push) env_push ;;
-      secret)
-        key="${args[${#args[@]} - 1]}"
-        case "$3" in
-          get) cat "$S/secret/$key" 2>/dev/null || fail "Error: no secret $key" ;;
-          set) mkdir -p "$(dirname "$S/secret/$key")" && cat >"$S/secret/$key" ;;
-        esac
-        ;;
-    esac
-    ;;
+  esac
+  ;;
 esac
 exit 0

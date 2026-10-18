@@ -42,10 +42,10 @@ _vault42_scan_patterns() {
     return 1
   }
   case $pats in
-    */*)
-      echo "scan: pattern in $marker names a path; 42ctl refuses it" >&2
-      return 1
-      ;;
+  */*)
+    echo "scan: pattern in $marker names a path; 42ctl refuses it" >&2
+    return 1
+    ;;
   esac
   printf '%s\n' "$pats"
 }

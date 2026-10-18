@@ -24,8 +24,8 @@ v42_common_dir() {
   local root="$1" common
   common="$(git -C "$root" rev-parse --git-common-dir 2>/dev/null)" || return 1
   case "$common" in
-    /*) ;;
-    *) common="$root/$common" ;;
+  /*) ;;
+  *) common="$root/$common" ;;
   esac
   (cd "$common" && pwd)
 }

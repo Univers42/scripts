@@ -69,21 +69,21 @@ v42_with_creds() {
   (
     for name in $V42_CRED_ALL; do unset "$name"; done
     case "$level" in
-      none) ;;
-      hook | keystore | login | register) [ -z "$passphrase" ] || export FT_PASSPHRASE="$passphrase" ;;
-      *) exit 2 ;;
+    none) ;;
+    hook | keystore | login | register) [ -z "$passphrase" ] || export FT_PASSPHRASE="$passphrase" ;;
+    *) exit 2 ;;
     esac
     case "$level" in
-      keystore | login | register)
-        [ -z "$s3key" ] || export FT_S3_KEY="$s3key"
-        [ -z "$s3secret" ] || export FT_S3_SECRET="$s3secret"
-        ;;
+    keystore | login | register)
+      [ -z "$s3key" ] || export FT_S3_KEY="$s3key"
+      [ -z "$s3secret" ] || export FT_S3_SECRET="$s3secret"
+      ;;
     esac
     case "$level" in
-      login | register)
-        [ -z "$password" ] || export FT_PASSWORD="$password"
-        [ -z "$email" ] || export FT_LOGIN_EMAIL="$email"
-        ;;
+    login | register)
+      [ -z "$password" ] || export FT_PASSWORD="$password"
+      [ -z "$email" ] || export FT_LOGIN_EMAIL="$email"
+      ;;
     esac
     [ "$level" != register ] || [ -z "$token" ] || export FT_REGISTER_TOKEN="$token"
     "$@"

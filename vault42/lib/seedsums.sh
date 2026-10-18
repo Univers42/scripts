@@ -21,7 +21,7 @@ seed_names() { awk '{ n = $2; sub(/^\*/, "", n) } n != "" { print n }' "$1"; }
 # "absent".
 _seed_sums_unlistable() {
   case "$1" in
-    SHA256SUMS* | *.bak* | *.stale | .*) return 0 ;;
+  SHA256SUMS* | *.bak* | *.stale | .*) return 0 ;;
   esac
   return 1
 }

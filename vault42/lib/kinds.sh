@@ -27,12 +27,12 @@ v42_kinds_select() {
   local kind picked=""
   for kind in "$@"; do
     case "$kind" in
-      all) picked="$picked $V42_KIND_ALL" ;;
-      env | secrets | volumes) picked="$picked $kind" ;;
-      *)
-        usage_error "--kind takes env, secrets, volumes or all, not '$kind'"
-        return 2
-        ;;
+    all) picked="$picked $V42_KIND_ALL" ;;
+    env | secrets | volumes) picked="$picked $kind" ;;
+    *)
+      usage_error "--kind takes env, secrets, volumes or all, not '$kind'"
+      return 2
+      ;;
     esac
   done
   [ -n "$picked" ] || picked="env secrets"
@@ -41,8 +41,8 @@ v42_kinds_select() {
 
 v42_kind_patterns() {
   case "$1" in
-    env) printf '%s\n' "$V42_KIND_ENV_PATTERNS" ;;
-    secrets) tr ' ' '\n' <<<"$V42_KIND_SECRETS_PATTERNS" ;;
+  env) printf '%s\n' "$V42_KIND_ENV_PATTERNS" ;;
+  secrets) tr ' ' '\n' <<<"$V42_KIND_SECRETS_PATTERNS" ;;
   esac
 }
 

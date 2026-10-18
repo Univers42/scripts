@@ -31,7 +31,7 @@ TAR_IMAGE="${TAR_IMAGE:-mongo:7}"
 # (not backed up), a cache under any other name is archived (wasted space).
 volume_is_cache() {
   case "$1" in
-    *gobuild | *gomod | *cargo-home | *pnpm_store | *node_modules) return 0 ;;
+  *gobuild | *gomod | *cargo-home | *pnpm_store | *node_modules) return 0 ;;
   esac
   return 1
 }
@@ -78,7 +78,7 @@ volume_users() { docker ps -q --filter "volume=$1"; }
 volume_archive_name() {
   local name="${1//.bak/_bak}"
   case "$name" in
-    *.stale) name="${name%.stale}_stale" ;;
+  *.stale) name="${name%.stale}_stale" ;;
   esac
   printf 'volume-%s.tar.gz' "$name"
 }

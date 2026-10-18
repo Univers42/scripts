@@ -98,8 +98,8 @@ _v42_ctl_finding() {
     return 0
   fi
   case " $V42_CTL_VERSIONS " in
-    *" $version "*) ;;
-    *) printf '42ctl %s is not in the verified list (%s); the scan mirror may differ' "$version" "$V42_CTL_VERSIONS" ;;
+  *" $version "*) ;;
+  *) printf '42ctl %s is not in the verified list (%s); the scan mirror may differ' "$version" "$V42_CTL_VERSIONS" ;;
   esac
   [ "$V42_CTL_KIND" = native ] && return 0
   [[ "$V42_CTL_IMAGE" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] ||

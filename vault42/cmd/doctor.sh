@@ -27,8 +27,8 @@ _doc_ctl() {
   fi
   version="$(v42_ctl_version)" || version=unknown
   case " $V42_CTL_VERSIONS " in
-    *" $version "*) _doc_row OK 42ctl "$version via $V42_CTL_KIND" ;;
-    *) _doc_row WARN 42ctl "$version is not in the verified list ($V42_CTL_VERSIONS); pull/list work, push is refused" ;;
+  *" $version "*) _doc_row OK 42ctl "$version via $V42_CTL_KIND" ;;
+  *) _doc_row WARN 42ctl "$version is not in the verified list ($V42_CTL_VERSIONS); pull/list work, push is refused" ;;
   esac
 }
 

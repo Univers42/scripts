@@ -6,98 +6,98 @@ echo "docker $(env | grep -cE '^(FT_PASSPHRASE|VAULT42_PASSPHRASE|FT_PASSWORD|FT
 vols="$FAKE_DOCKER/volumes"
 ps_file="$FAKE_DOCKER/ps"
 case "$1 $2" in
-  "volume ls")
-    ls -1 "$vols"
-    exit 0
-    ;;
-  "volume inspect")
-    [ -d "$vols/$3" ]
-    exit
-    ;;
-  "volume create")
-    mkdir -p "$vols/$3"
-    exit 0
-    ;;
-  "system df")
-    printf 'Images space usage:\n\nREPOSITORY   TAG   SIZE\n\nLocal Volumes space usage:\n\nVOLUME NAME   LINKS   SIZE\n'
-    for v in $(find "$vols" -mindepth 1 -maxdepth 1 -printf "%f\n" | sort); do
-      printf '%s   1   %s\n' "$v" "$(cat "$FAKE_DOCKER/sizes/$v" 2>/dev/null || echo 1MB)"
-    done
-    printf '\nBuild cache usage: 0B\n'
-    exit 0
-    ;;
+"volume ls")
+  ls -1 "$vols"
+  exit 0
+  ;;
+"volume inspect")
+  [ -d "$vols/$3" ]
+  exit
+  ;;
+"volume create")
+  mkdir -p "$vols/$3"
+  exit 0
+  ;;
+"system df")
+  printf 'Images space usage:\n\nREPOSITORY   TAG   SIZE\n\nLocal Volumes space usage:\n\nVOLUME NAME   LINKS   SIZE\n'
+  for v in $(find "$vols" -mindepth 1 -maxdepth 1 -printf "%f\n" | sort); do
+    printf '%s   1   %s\n' "$v" "$(cat "$FAKE_DOCKER/sizes/$v" 2>/dev/null || echo 1MB)"
+  done
+  printf '\nBuild cache usage: 0B\n'
+  exit 0
+  ;;
 esac
 case "$1" in
-  info)
-    if [ "${FAKE_ROOTLESS:-0}" = 1 ]; then echo '[name=seccomp,profile=builtin name=rootless]'; else echo '[name=seccomp,profile=builtin]'; fi
-    exit 0
-    ;;
-  ps)
-    want="${4#volume=}"
-    awk -v v="$want" '$2 == v { print $1 }' "$ps_file"
-    exit 0
-    ;;
-  stop)
-    shift
-    for id; do
-      grep "^$id " "$ps_file" >>"$FAKE_DOCKER/stopped" || true
-      grep -v "^$id " "$ps_file" >"$ps_file.new" || true
-      mv "$ps_file.new" "$ps_file"
-    done
-    exit 0
-    ;;
-  start)
-    id="$2"
-    [ "${FAKE_START_FAIL:-}" != "$id" ] || exit 1
-    grep "^$id " "$FAKE_DOCKER/stopped" >>"$ps_file" || true
-    grep -v "^$id " "$FAKE_DOCKER/stopped" >"$FAKE_DOCKER/stopped.new" || true
-    mv "$FAKE_DOCKER/stopped.new" "$FAKE_DOCKER/stopped"
-    exit 0
-    ;;
-  inspect)
-    grep -q "^${4} " "$ps_file" && echo true || echo false
-    exit 0
-    ;;
+info)
+  if [ "${FAKE_ROOTLESS:-0}" = 1 ]; then echo '[name=seccomp,profile=builtin name=rootless]'; else echo '[name=seccomp,profile=builtin]'; fi
+  exit 0
+  ;;
+ps)
+  want="${4#volume=}"
+  awk -v v="$want" '$2 == v { print $1 }' "$ps_file"
+  exit 0
+  ;;
+stop)
+  shift
+  for id; do
+    grep "^$id " "$ps_file" >>"$FAKE_DOCKER/stopped" || true
+    grep -v "^$id " "$ps_file" >"$ps_file.new" || true
+    mv "$ps_file.new" "$ps_file"
+  done
+  exit 0
+  ;;
+start)
+  id="$2"
+  [ "${FAKE_START_FAIL:-}" != "$id" ] || exit 1
+  grep "^$id " "$FAKE_DOCKER/stopped" >>"$ps_file" || true
+  grep -v "^$id " "$FAKE_DOCKER/stopped" >"$FAKE_DOCKER/stopped.new" || true
+  mv "$FAKE_DOCKER/stopped.new" "$FAKE_DOCKER/stopped"
+  exit 0
+  ;;
+inspect)
+  grep -q "^${4} " "$ps_file" && echo true || echo false
+  exit 0
+  ;;
 esac
 [ "$1" = run ] || exit 64
 shift
 maps=() entry="" image="" net="" user="" workdir="" fwd=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --rm) ;;
-    --network)
-      net="$2"
-      shift
-      ;;
-    --user)
-      user="$2"
-      shift
-      ;;
-    -w)
-      workdir="$2"
-      shift
-      ;;
-    -e)
-      fwd+=("$2")
-      shift
-      ;;
-    --entrypoint)
-      entry="$2"
-      shift
-      ;;
-    -v)
-      src="${2%%:*}"
-      rest="${2#*:}"
-      dst="${rest%%:*}"
-      case "$src" in */*) ;; *) src="$vols/$src" ;; esac
-      maps+=("$dst=$src")
-      shift
-      ;;
-    *)
-      image="$1"
-      shift
-      break
-      ;;
+  --rm) ;;
+  --network)
+    net="$2"
+    shift
+    ;;
+  --user)
+    user="$2"
+    shift
+    ;;
+  -w)
+    workdir="$2"
+    shift
+    ;;
+  -e)
+    fwd+=("$2")
+    shift
+    ;;
+  --entrypoint)
+    entry="$2"
+    shift
+    ;;
+  -v)
+    src="${2%%:*}"
+    rest="${2#*:}"
+    dst="${rest%%:*}"
+    case "$src" in */*) ;; *) src="$vols/$src" ;; esac
+    maps+=("$dst=$src")
+    shift
+    ;;
+  *)
+    image="$1"
+    shift
+    break
+    ;;
   esac
   shift
 done

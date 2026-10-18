@@ -125,12 +125,12 @@ _vol_archive_all() {
     one=0
     volume_archive "$name" "$VOL_ROOT/secrets" || one=$?
     case "$one" in
-      0) VOL_WRITTEN+=("$(volume_archive_name "$name")") ;;
-      2)
-        note "out of space at $VOL_ROOT: kept the ${#VOL_WRITTEN[@]} archives already written; free space, then rerun"
-        return 2
-        ;;
-      *) rc=1 ;;
+    0) VOL_WRITTEN+=("$(volume_archive_name "$name")") ;;
+    2)
+      note "out of space at $VOL_ROOT: kept the ${#VOL_WRITTEN[@]} archives already written; free space, then rerun"
+      return 2
+      ;;
+    *) rc=1 ;;
     esac
   done
   return "$rc"
@@ -173,19 +173,19 @@ _vol_capture() {
     arg="$1"
     shift
     case "$arg" in
-      --plan) plan=1 ;;
-      --only)
-        [ "$#" -gt 0 ] || {
-          usage_error "usage: vault42 volumes capture [--plan] [--only NAME]…"
-          return 2
-        }
-        only+=("$1")
-        shift
-        ;;
-      *)
-        usage_error "usage: vault42 volumes capture [--plan] [--only NAME]…   e.g. vault42 volumes capture --plan"
+    --plan) plan=1 ;;
+    --only)
+      [ "$#" -gt 0 ] || {
+        usage_error "usage: vault42 volumes capture [--plan] [--only NAME]…"
         return 2
-        ;;
+      }
+      only+=("$1")
+      shift
+      ;;
+    *)
+      usage_error "usage: vault42 volumes capture [--plan] [--only NAME]…   e.g. vault42 volumes capture --plan"
+      return 2
+      ;;
     esac
   done
   _vol_stack_guard "$V42_T" || return 1
@@ -221,9 +221,9 @@ _vol_restore() {
   export V42_FORCE=0
   for arg; do
     case "$arg" in
-      --all) all=1 ;;
-      --force) export V42_FORCE=1 ;;
-      *) pos+=("$arg") ;;
+    --all) all=1 ;;
+    --force) export V42_FORCE=1 ;;
+    *) pos+=("$arg") ;;
     esac
   done
   if [ "$all" -eq 1 ]; then
@@ -254,8 +254,8 @@ cmd_volumes() {
   for name in $V42_CRED_ALL; do unset "$name"; done
   _vol_target || return $?
   case "$sub" in
-    list) _vol_list ;;
-    capture) _vol_capture "$@" ;;
-    restore) _vol_restore "$@" ;;
+  list) _vol_list ;;
+  capture) _vol_capture "$@" ;;
+  restore) _vol_restore "$@" ;;
   esac
 }

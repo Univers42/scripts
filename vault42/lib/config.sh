@@ -32,12 +32,12 @@ v42_targets() { [ "${#V42_TARGETS[@]}" -eq 0 ] || printf '%s\n' "${V42_TARGETS[@
 
 _v42_cfg_default() {
   case "$1" in
-    root) printf . ;;
-    kinds) printf 'env secrets' ;;
-    mode) printf team ;;
-    refuse_on_env) printf 'staging prod' ;;
-    min_free_mb) printf 1024 ;;
-    personal_fallback) printf no ;;
+  root) printf . ;;
+  kinds) printf 'env secrets' ;;
+  mode) printf team ;;
+  refuse_on_env) printf 'staging prod' ;;
+  min_free_mb) printf 1024 ;;
+  personal_fallback) printf no ;;
   esac
 }
 
@@ -92,11 +92,11 @@ _v42_cfg_line() {
     return 2
   }
   case " ${V42_CFG_KEYS//$'\n'/ } " in
-    *" $key "*) ;;
-    *)
-      _v42_cfg_err "$where" "unknown key '$key' (known: ${V42_CFG_KEYS//$'\n'/ })"
-      return 2
-      ;;
+  *" $key "*) ;;
+  *)
+    _v42_cfg_err "$where" "unknown key '$key' (known: ${V42_CFG_KEYS//$'\n'/ })"
+    return 2
+    ;;
   esac
   V42_CFG["$V42_CFG_CURRENT.$key"]="$value"
 }
@@ -104,8 +104,8 @@ _v42_cfg_line() {
 _v42_cfg_resolve() {
   local path="$2"
   case "$path" in
-    /*) ;;
-    *) path="$1/$path" ;;
+  /*) ;;
+  *) path="$1/$path" ;;
   esac
   (cd "$path" 2>/dev/null && pwd) || printf '%s' "$path"
 }

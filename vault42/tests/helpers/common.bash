@@ -81,7 +81,7 @@ proj_setup() {
   write_conf "$R" "private = secrets/*.env"
   export VAULT42_CONFIG="$CONF" FT_PASSPHRASE=pass-planted-1111
   printf '7704efb0-5a6a-4117-9cdd-a9265a8fc350 active\nother active\n' >"$FAKE42/keys.e"
-  V42="$V42_ROOT_DIR/vault42.sh"
+  export V42="$V42_ROOT_DIR/vault42.sh"
 }
 
 # add_conf LINE… — append keys to the one target of $CONF.

@@ -15,7 +15,7 @@ usage_error() {
 
 is_uint() {
   case "${1:-}" in
-    '' | *[!0-9]*) return 1 ;;
+  '' | *[!0-9]*) return 1 ;;
   esac
 }
 

@@ -40,34 +40,34 @@ V42_REST=()
 _v42_parse_globals() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --config | --target | --kind)
-        [ "$#" -ge 2 ] || {
-          usage_error "$1 needs a value"
-          return 2
-        }
-        case "$1" in
-          --config) V42_CONFIG_FLAG="$2" ;;
-          --target) V42_TARGET_FLAG="$2" ;;
-          --kind) V42_KIND_ARGS+=("$2") ;;
-        esac
-        shift 2
-        ;;
-      --config=*)
-        V42_CONFIG_FLAG="${1#*=}"
-        shift
-        ;;
-      --target=*)
-        V42_TARGET_FLAG="${1#*=}"
-        shift
-        ;;
-      --kind=*)
-        V42_KIND_ARGS+=("${1#*=}")
-        shift
-        ;;
-      *)
-        V42_REST+=("$1")
-        shift
-        ;;
+    --config | --target | --kind)
+      [ "$#" -ge 2 ] || {
+        usage_error "$1 needs a value"
+        return 2
+      }
+      case "$1" in
+      --config) V42_CONFIG_FLAG="$2" ;;
+      --target) V42_TARGET_FLAG="$2" ;;
+      --kind) V42_KIND_ARGS+=("$2") ;;
+      esac
+      shift 2
+      ;;
+    --config=*)
+      V42_CONFIG_FLAG="${1#*=}"
+      shift
+      ;;
+    --target=*)
+      V42_TARGET_FLAG="${1#*=}"
+      shift
+      ;;
+    --kind=*)
+      V42_KIND_ARGS+=("${1#*=}")
+      shift
+      ;;
+    *)
+      V42_REST+=("$1")
+      shift
+      ;;
     esac
   done
 }
@@ -76,19 +76,19 @@ _v42_dispatch() {
   local cmd="${1:-help}"
   shift || true
   case "$cmd" in
-    help | -h | --help) cmd_help "$@" ;;
-    doctor | status) cmd_doctor "$@" ;;
-    login) cmd_login "$@" ;;
-    keys) cmd_keys "$@" ;;
-    list) cmd_list "$@" ;;
-    diff) cmd_diff "$@" ;;
-    find) cmd_find "$@" ;;
-    pull) cmd_pull "$@" ;;
-    push) cmd_push "$@" ;;
-    secret) cmd_secret "$@" ;;
-    config) cmd_config "$@" ;;
-    volumes) cmd_volumes "$@" ;;
-    *) usage_error "unknown command '$cmd'; run: vault42 help" ;;
+  help | -h | --help) cmd_help "$@" ;;
+  doctor | status) cmd_doctor "$@" ;;
+  login) cmd_login "$@" ;;
+  keys) cmd_keys "$@" ;;
+  list) cmd_list "$@" ;;
+  diff) cmd_diff "$@" ;;
+  find) cmd_find "$@" ;;
+  pull) cmd_pull "$@" ;;
+  push) cmd_push "$@" ;;
+  secret) cmd_secret "$@" ;;
+  config) cmd_config "$@" ;;
+  volumes) cmd_volumes "$@" ;;
+  *) usage_error "unknown command '$cmd'; run: vault42 help" ;;
   esac
 }
 
@@ -103,8 +103,8 @@ main() {
   V42_CONFIG_RC=0
   v42_config_load "$(v42_config_path "$V42_CONFIG_FLAG")" || V42_CONFIG_RC=$?
   case "${V42_REST[0]}" in
-    doctor | status) ;;
-    *) [ "$V42_CONFIG_RC" -eq 0 ] || return "$V42_CONFIG_RC" ;;
+  doctor | status) ;;
+  *) [ "$V42_CONFIG_RC" -eq 0 ] || return "$V42_CONFIG_RC" ;;
   esac
   _v42_dispatch "${V42_REST[@]}"
 }

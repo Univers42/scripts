@@ -127,25 +127,25 @@ cmd_push() {
   v42_push_allow_personal 0
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --yes) V42_PUSH_YES=1 ;;
-      --personal) v42_push_allow_personal ;;
-      --drop | --share | --private)
-        [ "$#" -gt 1 ] || {
-          usage_error "$1 needs a value"
-          return 2
-        }
-        case "$1" in
-          --drop) V42_PUSH_DROPS+=("$2") ;;
-          --share) V42_PUSH_SHARE+=("$2") ;;
-          --private) V42_PUSH_PRIVATE+=("$2") ;;
-        esac
-        shift
-        ;;
-      -*)
-        usage_error "unknown push option '$1'; run: vault42 help push"
+    --yes) V42_PUSH_YES=1 ;;
+    --personal) v42_push_allow_personal ;;
+    --drop | --share | --private)
+      [ "$#" -gt 1 ] || {
+        usage_error "$1 needs a value"
         return 2
-        ;;
-      *) V42_PUSH_FILES+=("$1") ;;
+      }
+      case "$1" in
+      --drop) V42_PUSH_DROPS+=("$2") ;;
+      --share) V42_PUSH_SHARE+=("$2") ;;
+      --private) V42_PUSH_PRIVATE+=("$2") ;;
+      esac
+      shift
+      ;;
+    -*)
+      usage_error "unknown push option '$1'; run: vault42 help push"
+      return 2
+      ;;
+    *) V42_PUSH_FILES+=("$1") ;;
     esac
     shift
   done
@@ -197,19 +197,19 @@ cmd_pull() {
   V42_PULL_ONLY=()
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --apply) apply=1 ;;
-      --only)
-        [ "$#" -gt 1 ] || {
-          usage_error "--only needs a path or pattern"
-          return 2
-        }
-        V42_PULL_ONLY+=("$2")
-        shift
-        ;;
-      *)
-        usage_error "unknown pull argument '$1'; run: vault42 help pull"
+    --apply) apply=1 ;;
+    --only)
+      [ "$#" -gt 1 ] || {
+        usage_error "--only needs a path or pattern"
         return 2
-        ;;
+      }
+      V42_PULL_ONLY+=("$2")
+      shift
+      ;;
+    *)
+      usage_error "unknown pull argument '$1'; run: vault42 help pull"
+      return 2
+      ;;
     esac
     shift
   done

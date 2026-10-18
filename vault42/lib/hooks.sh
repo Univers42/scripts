@@ -28,8 +28,8 @@ _v42_hook_tokens() {
 _v42_hook_file() {
   local root="$1" token="$2" path
   case "$token" in
-    /*) path="$token" ;;
-    *) path="$root/$token" ;;
+  /*) path="$token" ;;
+  *) path="$root/$token" ;;
   esac
   [ -e "$path" ] && [ ! -d "$path" ] || return 1
   printf '%s' "$path"
@@ -54,10 +54,10 @@ _v42_hook_check_file() {
     return 2
   }
   case "/$rel/" in
-    */secrets/* | */.secrets/*)
-      _v42_hook_reject "$rel" "it sits under a secrets directory"
-      return 2
-      ;;
+  */secrets/* | */.secrets/*)
+    _v42_hook_reject "$rel" "it sits under a secrets directory"
+    return 2
+    ;;
   esac
   if vault42_scan "$root" | grep -qxF -- "$rel"; then
     _v42_hook_reject "$rel" "the scan would upload it"
