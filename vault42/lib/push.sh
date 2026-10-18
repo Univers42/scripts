@@ -25,7 +25,7 @@ v42_push_allow_personal() { V42_PUSH_PERSONAL="${1:-1}"; }
 v42_locked() {
   local root="$1" rc
   shift
-  vault42_lock "$root" || return 4
+  vault42_lock "$root" || return $?
   "$@"
   rc=$?
   vault42_unlock_lock

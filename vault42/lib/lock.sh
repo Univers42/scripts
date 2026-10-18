@@ -3,8 +3,9 @@
 # session in the same tree would read half of it. Sourced; sets no shell options. Needs `flock`.
 #
 #   vault42_lock ROOT     take an exclusive, non-blocking flock on <state dir of ROOT>/lock and hold
-#                         it on $VAULT42_LOCK_FD until the process exits. Status 1 when taken or
-#                         flock is absent.
+#                         it on $VAULT42_LOCK_FD until the process exits. Status 4 when another run
+#                         holds it; status 1 (with the cause on stderr) when flock is absent or the
+#                         state dir or lock file cannot be made: those are not "locked".
 #   vault42_unlock_lock   release it.
 #
 # Caveat: flock is advisory, so a tool that does not take it (42ctl itself, a hand mv) is not excluded.
@@ -17,14 +18,20 @@ vault42_lock() {
     printf 'vault42_lock: flock (util-linux) is not installed; cannot guard %s\n' "$root" >&2
     return 1
   }
-  dir="$(v42_state_dir "$root")" || return 1
+  dir="$(v42_state_dir "$root")" || {
+    printf 'vault42_lock: cannot create the state directory for %s (read-only, or a file in the way?)\n' "$root" >&2
+    return 1
+  }
   file="$dir/lock"
-  exec {VAULT42_LOCK_FD}>>"$file" || return 1
+  exec {VAULT42_LOCK_FD}>>"$file" || {
+    printf 'vault42_lock: cannot open %s\n' "$file" >&2
+    return 1
+  }
   if ! flock -n "$VAULT42_LOCK_FD"; then
     holder="$(cat "$file" 2>/dev/null)"
     printf 'locked: another vault42 run holds %s%s\n' "$file" "${holder:+ (pid $holder)}" >&2
     exec {VAULT42_LOCK_FD}>&-
-    return 1
+    return 4
   fi
   printf '%s\n' "$$" >"$file"
 }

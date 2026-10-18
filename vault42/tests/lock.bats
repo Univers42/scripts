@@ -18,7 +18,7 @@ second() { bash -c '. "$1"; . "$2"; vault42_lock "$3"' _ "$BATS_TEST_DIRNAME/../
 @test "a second lock on the same root is refused while the first is held" {
   vault42_lock "$R"
   run --separate-stderr second "$R"
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 4 ]
   [[ "$stderr" == *"locked: another vault42 run holds"* ]]
   [[ "$stderr" == *"(pid $$)"* ]]
 }
@@ -41,7 +41,7 @@ second() { bash -c '. "$1"; . "$2"; vault42_lock "$3"' _ "$BATS_TEST_DIRNAME/../
   vault42_lock "$plain"
   [ -f "$plain/.vault42/lock" ]
   run --separate-stderr second "$plain"
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 4 ]
   [[ "$stderr" == *"$plain/.vault42/lock"* ]]
 }
 
@@ -50,7 +50,7 @@ second() { bash -c '. "$1"; . "$2"; vault42_lock "$3"' _ "$BATS_TEST_DIRNAME/../
   git -C "$R" worktree add -q "$BATS_TEST_TMPDIR/wt2"
   vault42_lock "$R"
   run --separate-stderr second "$BATS_TEST_TMPDIR/wt2"
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 4 ]
   [[ "$stderr" == *"$R/.git/vault42/lock"* ]]
 }
 
@@ -58,4 +58,15 @@ second() { bash -c '. "$1"; . "$2"; vault42_lock "$3"' _ "$BATS_TEST_DIRNAME/../
   run --separate-stderr bash -c '. "$1"; . "$2"; PATH=/nonexistent; vault42_lock "$3"' _ "$BATS_TEST_DIRNAME/../lib/state.sh" "$BATS_TEST_DIRNAME/../lib/lock.sh" "$R"
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"flock"* ]]
+}
+
+@test "v42_locked: a contended lock is 4, a missing flock is 1" {
+  vault42_lock "$R"
+  run --separate-stderr bash -c '. "$1"; . "$2"; . "$3"; v42_locked "$4" true' _ \
+    "$BATS_TEST_DIRNAME/../lib/state.sh" "$BATS_TEST_DIRNAME/../lib/lock.sh" "$BATS_TEST_DIRNAME/../lib/push.sh" "$R"
+  [ "$status" -eq 4 ]
+  run --separate-stderr bash -c '. "$1"; . "$2"; . "$3"; PATH=/nonexistent; v42_locked "$4" true' _ \
+    "$BATS_TEST_DIRNAME/../lib/state.sh" "$BATS_TEST_DIRNAME/../lib/lock.sh" "$BATS_TEST_DIRNAME/../lib/push.sh" "$R"
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *flock* ]]
 }

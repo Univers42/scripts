@@ -357,3 +357,10 @@ pushed() { [ -s "$FAKE42/push.log" ]; }
   [ "$status" -eq 2 ]
   [ ! -e "$FAKE42/push.log" ]
 }
+
+@test "lock: a state dir that cannot be created is exit 1 with the cause, not 4 (locked)" {
+  : >"$R/.git/vault42"
+  run --separate-stderr "$V42" push --yes
+  [ "$status" -eq 1 ]
+  [ ! -e "$FAKE42/push.log" ]
+}
