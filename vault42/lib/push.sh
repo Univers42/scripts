@@ -58,6 +58,10 @@ v42_push_route() {
   }
   V42_HOLDERS="$(v42_holders "$rows" | paste -sd' ')"
   state="$(v42_my_state "$rows" "$me")"
+  if [ "$(v42_cfg "$target" guard)" = sole-holder ]; then
+    v42_volkey_proof "$target" "$rows" "$me"
+    return
+  fi
   [ "$state" != active ] || return 0
   if [ "$(v42_cfg "$target" personal_fallback)" = yes ] && [ "${V42_PUSH_PERSONAL:-0}" -eq 1 ]; then
     V42_ROUTE=fallback

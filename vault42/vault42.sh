@@ -22,7 +22,7 @@ _v42_self_dir() {
 
 V42_HOME="$(_v42_self_dir)"
 for _m in common state scan private envfile seedsums lock volumes config creds ctl hooks kinds remote \
-  diffs gitignored stage netdiag targets privacy push; do
+  diffs gitignored stage netdiag targets privacy volkey volrows push; do
   # shellcheck source=/dev/null
   . "$V42_HOME/lib/$_m.sh"
 done

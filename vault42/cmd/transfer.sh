@@ -118,6 +118,7 @@ _push_run() {
     return 1
   }
   if [ "$V42_ROUTE" = team ]; then _push_verify "$target" || return 1; fi
+  if [ "$(v42_cfg "$target" guard)" = sole-holder ]; then v42_volkey_drill "$target" || return 1; fi
   [ "$V42_ROUTE" != fallback ] || return 3
 }
 
