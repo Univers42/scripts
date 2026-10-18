@@ -149,3 +149,19 @@ base() {
   run v42_config_show
   [ "$output" = $'[secrets]\norg = univers42\nproject = groot\nenv = prod\nroot = '"$D"$'\nkinds = env secrets\nmode = team\nrefuse_on_env = staging prod\nmin_free_mb = 1024\npersonal_fallback = no' ]
 }
+
+# `./u.secrets` never equals the stored path `u.secrets`, so the archive of every git-ignored file
+# once went out shared while the privacy verify passed.
+@test "C1: an archive path with ./, .., // or a leading / is rejected at load, naming the key" {
+  local key bad
+  for key in stage_unscanned_as stage_dir_as; do
+    for bad in ./u.secrets ../u.secrets a/../u.secrets a//u.secrets /abs/u.secrets a/./u.secrets a/ ..; do
+      conf '[s]' 'org = o' 'project = p' 'env = e' "$key = $bad"
+      run --separate-stderr v42_config_load "$D/vault42.conf"
+      [ "$status" -eq 2 ]
+      [[ "$stderr" == *"$key"* ]]
+    done
+  done
+  conf '[s]' 'org = o' 'project = p' 'env = e' 'stage_unscanned_as = secrets/u.tgz' 'stage_dir_as = a/b.tgz'
+  v42_config_load "$D/vault42.conf"
+}

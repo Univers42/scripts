@@ -292,3 +292,37 @@ pushed() { [ -s "$FAKE42/push.log" ]; }
     [ "$output" = 0 ]
   done
 }
+
+@test "C1: an archive path the scan never uploads refuses the push before 42ctl is called" {
+  printf 'unscanned.tgz\n' >>"$R/.gitignore"
+  printf 'x' >"$R/cache.dump"
+  add_conf "stage_unscanned_as = unscanned.tgz"
+  run "$V42" push --yes
+  [ "$status" -eq 1 ]
+  [[ "$output" == *unscanned.tgz* ]]
+  [ ! -e "$FAKE42/push.log" ]
+}
+
+@test "C1: stage_unscanned_as = ./u.secrets is a config error, not a shared archive" {
+  printf 'u.secrets\ncache.dump\n' >>"$R/.gitignore"
+  printf 'x' >"$R/cache.dump"
+  add_conf "stage_unscanned_as = ./u.secrets"
+  run "$V42" push --yes
+  [ "$status" -eq 2 ]
+  [ ! -e "$FAKE42/push.log" ]
+}
+
+@test "unclassified: a nested secrets/ or .secrets/ file is refused like a top-level one, until decided" {
+  mkdir -p "$R/apps/grobase/secrets" "$R/.secrets"
+  printf 'JWT' >"$R/apps/grobase/secrets/jwt.key"
+  printf 'x' >"$R/.secrets/x"
+  run "$V42" push --yes
+  [ "$status" -eq 1 ]
+  [[ "$output" == *apps/grobase/secrets/jwt.key* ]]
+  [[ "$output" == *.secrets/x* ]]
+  [ ! -e "$FAKE42/push.log" ]
+  run "$V42" push --yes --private 'apps/*' --share .secrets/x
+  [ "$status" -eq 0 ]
+  grep -qx apps/grobase/secrets/jwt.key "$FAKE42/private.e"
+  ! grep -qx .secrets/x "$FAKE42/private.e"
+}

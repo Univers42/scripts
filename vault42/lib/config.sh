@@ -138,12 +138,24 @@ _v42_cfg_in() {
   return 1
 }
 
+# An archive is matched against stored paths by exact string: `./a` or `a//b` would never equal the
+# `a`, `a/b` the scan lists, and the archive would go out shared. An unset key is clean.
+_v42_cfg_clean_path() {
+  [ -z "$1" ] || [[ "/$1/" != *//* && "/$1/" != */./* && "/$1/" != */../* ]]
+}
+
 # Value rules per key. Everything that reaches an argv or a path is held to a safe alphabet.
 _v42_cfg_validate_target() {
   local t="$1" k kinds word
   for k in org project env; do
     [[ "$(v42_cfg "$t" "$k")" =~ ^[A-Za-z0-9._-]+$ ]] || {
       _v42_cfg_err "[$t]" "'$k' is required and may hold only letters, digits . _ -"
+      return 2
+    }
+  done
+  for k in stage_unscanned_as stage_dir_as; do
+    _v42_cfg_clean_path "$(v42_cfg "$t" "$k")" || {
+      _v42_cfg_err "[$t]" "'$k' must be a clean relative path: no leading /, ./, .. or //"
       return 2
     }
   done

@@ -46,3 +46,8 @@ setup() {
   run vault42_undecided '' '' <<<$'secrets/a\nsecrets/b.local'
   [ "$output" = secrets/a ]
 }
+
+@test "undecided: a secrets or .secrets directory at any depth is covered by the guard" {
+  run vault42_undecided 'secrets/*.env' '' <<<$'apps/grobase/secrets/jwt.key\n.secrets/x\na/.secrets/y\nsecrets-old/z\nnot-secrets/odd\napps/secrets'
+  [ "$output" = $'apps/grobase/secrets/jwt.key\n.secrets/x\na/.secrets/y' ]
+}

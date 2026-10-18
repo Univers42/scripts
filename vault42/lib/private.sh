@@ -4,7 +4,8 @@
 #
 #   vault42_glob_match PATH PATTERN   42ctl's matcher: `*` is the only wildcard and crosses `/`
 #   vault42_filter_private PATTERNS   stdin paths that any pattern (newline list) selects, plus `*.local`
-#   vault42_undecided PRIVATE SHARED  stdin paths under secrets/ that no private pattern selects and no
+#   vault42_undecided PRIVATE SHARED  stdin paths with a secrets/ or .secrets/ directory component (as
+#                                     scan.sh takes them) that no private pattern selects and no
 #                                     shared pattern (newline list) names: the ones nobody classified
 #
 # Caveat: `*.local` is repeated from 42ctl's scope_private.rs (DEFAULT_PRIVATE). A 42ctl that forces
@@ -40,7 +41,7 @@ vault42_filter_private() {
 vault42_undecided() {
   local path pattern shared
   while IFS= read -r path; do
-    [[ "$path" == secrets/* ]] || continue
+    [[ "/$path" == */secrets/* || "/$path" == */.secrets/* ]] || continue
     [ -z "$(printf '%s\n' "$path" | vault42_filter_private "$1")" ] || continue
     shared=0
     while IFS= read -r pattern; do

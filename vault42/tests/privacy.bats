@@ -66,3 +66,21 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"a.env"*"planned shared"* ]]
 }
+
+@test "plan: a stage archive the scan would not upload is refused, never silently left out of the push" {
+  printf 1 >"$R/unscanned.tgz"
+  write_conf "$R" "private = secrets/*.env" "stage_unscanned_as = unscanned.tgz"
+  v42_config_load "$CONF"
+  run v42_privacy_plan t
+  [ "$status" -eq 1 ]
+  [[ "$output" == *unscanned.tgz* ]]
+  [[ "$output" == *"scan"* ]]
+}
+
+@test "plan: a stage archive the scan takes is in the expected private set" {
+  printf 1 >"$R/secrets/s.tgz"
+  write_conf "$R" "private = secrets/*.env" "stage_unscanned_as = secrets/s.tgz"
+  v42_config_load "$CONF"
+  v42_privacy_plan t
+  [[ "$V42_EXPECT_PRIVATE" == *secrets/s.tgz* ]]
+}

@@ -7,7 +7,8 @@
 #                             sets V42_PUSH_PATTERNS (the --private arguments, deduplicated: the target's
 #                             `private` and `private_add`, the flags, the stage archives, `*.local`) and
 #                             V42_EXPECT_PRIVATE (the local paths those patterns select). Status 1
-#                             naming every secrets/ file nobody classified.
+#                             naming every secrets/ file (at any depth) nobody classified, and
+#                             a staged archive the scan or the patterns would not carry.
 #   v42_privacy_verify TARGET status 1 naming every difference between V42_EXPECT_PRIVATE and the
 #                             vault's private set, in both directions
 #
@@ -21,6 +22,24 @@
 
 declare -ga V42_PUSH_PRIVATE=() V42_PUSH_SHARE=() V42_PUSH_PATTERNS=()
 V42_EXPECT_PRIVATE=""
+
+# A staged archive the scan does not take is never uploaded; one the patterns do not select is
+# uploaded shared. Either way the push would report success with the files unprotected or missing.
+_v42_privacy_archives_travel() {
+  local target="$1" paths="$2" root archive
+  root="$(v42_cfg "$target" root)"
+  while IFS= read -r archive; do
+    [ -e "$root/$archive" ] || continue
+    grep -qxF -- "$archive" <<<"$paths" || {
+      note "refusing: the staged archive $archive is not a file 42ctl's scan takes, so it would never be uploaded; name it under secrets/ or *.secrets"
+      return 1
+    }
+    grep -qxF -- "$archive" <<<"$V42_EXPECT_PRIVATE" || {
+      note "refusing: the staged archive $archive is not in the planned private set, so it would go out shared"
+      return 1
+    }
+  done < <(v42_stage_paths "$target")
+}
 
 v42_privacy_plan() {
   local target="$1" paths shared undecided
@@ -43,6 +62,7 @@ v42_privacy_plan() {
     return 1
   fi
   V42_EXPECT_PRIVATE="$(vault42_filter_private "$(printf '%s\n' "${V42_PUSH_PATTERNS[@]}")" <<<"$paths" | LC_ALL=C sort -u)"
+  _v42_privacy_archives_travel "$target" "$paths"
 }
 
 v42_privacy_verify() {
