@@ -93,13 +93,16 @@ _v42_dispatch() {
 }
 
 main() {
+  local kinds_line
   _v42_parse_globals "$@" || return 2
   case "${V42_REST[0]:-help}" in help | -h | --help)
     _v42_dispatch "${V42_REST[@]}"
     return
     ;;
   esac
-  read -ra V42_KINDS <<<"$(v42_kinds_select "${V42_KIND_ARGS[@]}")" || return 2
+  # Captured first: `read` from a here-string always succeeds, which hid a failed selection.
+  kinds_line="$(v42_kinds_select "${V42_KIND_ARGS[@]}")" || return 2
+  read -ra V42_KINDS <<<"$kinds_line"
   V42_CONFIG_RC=0
   v42_config_load "$(v42_config_path "$V42_CONFIG_FLAG")" || V42_CONFIG_RC=$?
   case "${V42_REST[0]}" in

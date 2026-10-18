@@ -130,3 +130,8 @@ teardown() { assert_no_stdin_violation; }
   VAULT42_SESSION_B64=zzz VAULT42_CI=1 FT_S3_KEY=k run "$V42" config show
   [ "$output" = "$(cat "$BATS_TEST_TMPDIR/before")" ]
 }
+
+@test "--kind with an unknown kind exits 2" {
+  run "$V42" --kind bogus config show
+  [ "$status" -eq 2 ]
+}
