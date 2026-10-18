@@ -1,0 +1,219 @@
+#!/bin/bash
+# Stand-in for 42ctl 0.1.16 in the vault42 bats suites. State lives in the directory $FAKE42; every
+# call appends "cwd=… argv=… pass=… …" to $FAKE42/argv.log, with credentials logged as yes/no and
+# NEVER as values. Switches (a file in $FAKE42, content is its value where noted):
+#   version                 what --version prints after "42ctl " (default 0.1.16)
+#   session                 "dead" -> auth me answers 401        net-down  auth me fails like a DNS error
+#   nologin / nocontract    auth status says "not logged in" / logged in without a contract
+#   contract                the tenant name auth status shows (default univers42)
+#   locked                  auth whoami fails                    passphrase  the value FT_PASSPHRASE must equal
+#   keys.ENV  keys-fail     rows "MEMBER STATE" of env keys ls / make it fail
+#   envs  envs-fail         env ls rows (default: one per keys.ENV) / make it fail
+#   files.ENV  private.ENV  rows "SIZE PATH" and the Private=true paths of an environment
+#   tree.ENV/               what env pull restores           files-blank  env files prints a blank-size row
+#   files-fail              env files fails                  nowrap.ENV   the operator has no wrap
+#   pull-fail  push-fail    make pull / push fail            net-flip     the first env files call
+#                           is followed by a change in the vault (a row is added to files.ENV)
+#   secret/PATH             env secret get/set store
+# env push rebuilds files.ENV, private.ENV and tree.ENV from the scan of its cwd ($FAKE_SCAN_LIB).
+S="${FAKE42:?FAKE42 unset}"
+args=("$@")
+
+if [ "$*" != "${*#env secret set}" ] && [ "${1:-}" = env ] && [ "${2:-}" = secret ] && [ "${3:-}" = set ]; then
+  :
+else
+  if [ -t 0 ]; then
+    echo "$*" >>"$S/stdin-violation"
+    echo "fake 42ctl: stdin is a terminal" >&2
+    exit 99
+  fi
+  read -r -t 1 _stdin_probe
+  if [ "$?" -ne 1 ]; then
+    echo "$*" >>"$S/stdin-violation"
+    echo "fake 42ctl: stdin is not at EOF" >&2
+    exit 99
+  fi
+fi
+
+yn() { [ -n "${!1:-}" ] && echo yes || echo no; }
+extra=""
+for n in FT_EMAIL FT_TENANT VAULT42_REGISTER_TOKEN VAULT42_PASSPHRASE; do [ -z "${!n:-}" ] || extra="$extra $n"; done
+printf 'cwd=%s argv=%s pass=%s password=%s email=%s token=%s s3=%s extra=%s\n' "$PWD" "$*" "$(yn FT_PASSPHRASE)" \
+  "$(yn FT_PASSWORD)" "$(yn FT_LOGIN_EMAIL)" "$(yn FT_REGISTER_TOKEN)" "$(yn FT_S3_KEY)" "${extra# }" >>"$S/argv.log"
+
+opt() {
+  local i
+  for ((i = 0; i < ${#args[@]}; i++)); do
+    if [ "${args[i]}" = "$1" ]; then
+      printf '%s' "${args[i + 1]}"
+      return 0
+    fi
+  done
+}
+opts() {
+  local i
+  for ((i = 0; i < ${#args[@]}; i++)); do [ "${args[i]}" != "$1" ] || printf '%s\n' "${args[i + 1]}"; done
+}
+has() {
+  local a
+  for a in "${args[@]}"; do [ "$a" != "$1" ] || return 0; done
+  return 1
+}
+fail() {
+  echo "$1" >&2
+  exit "${2:-1}"
+}
+file_has() { [ -f "$1" ] && grep -qxF -- "$2" "$1"; }
+
+envname="$(opt --env)"
+fmt="$(opt --format)"
+filter="$(opt --filter)"
+
+list_files() {
+  local f="$S/files.$envname" p
+  [ -f "$f" ] || fail "error: environment '$envname' holds no tree"
+  [ ! -e "$S/files-fail" ] || fail "Error: listing failed"
+  [ ! -e "$S/nowrap.$envname" ] || fail "error: no wrap for this account at epoch 1"
+  if [ "$filter" = Private=true ]; then
+    [ -s "$S/private.$envname" ] || fail "Error: no row matches Private=true"
+    cat "$S/private.$envname"
+    return
+  fi
+  if [ -e "$S/files-blank" ] && [ "$fmt" != '{{.Path}}' ]; then
+    printf ' secrets/blank.dump\n'
+    return
+  fi
+  while read -r size p; do
+    [ -n "$p" ] || continue
+    case "$fmt" in
+      '{{.Path}}') printf '%s\n' "$p" ;;
+      '{{.Size}}') printf '%s\n' "$size" ;;
+      '{{.Size}} {{.Private}} {{.Path}}') printf '%s %s %s\n' "$size" "$(file_has "$S/private.$envname" "$p" && echo true || echo false)" "$p" ;;
+      *) printf '%s %s\n' "$size" "$p" ;;
+    esac
+  done <"$f"
+  if [ -e "$S/net-flip" ] && [ ! -e "$S/net-flipped" ]; then
+    touch "$S/net-flipped"
+    echo "9 flipped.dump" >>"$f"
+  fi
+}
+
+glob_ok() {
+  local path="$1" pat esc
+  [ "$#" -gt 1 ] || return 0
+  shift
+  for pat in "$@"; do
+    esc="${pat//\\/\\\\}"
+    # shellcheck disable=SC2254
+    case "$path" in $esc) return 0 ;; esac
+  done
+  return 1
+}
+
+env_pull() {
+  local tree="$S/tree.$envname" p n=0 pats=()
+  [ ! -e "$S/pull-fail" ] || fail "Error: pull failed"
+  [ ! -e "$S/nowrap.$envname" ] || fail "Error: no wrap for this account"
+  [ -d "$tree" ] || fail "error: environment '$envname' holds no tree"
+  mapfile -t pats < <(opts --only)
+  for pat in "${pats[@]}"; do
+    [ -n "$pat" ] || continue
+    local hit=0
+    while IFS= read -r p; do glob_ok "$p" "$pat" && hit=1; done < <(cd "$tree" && find . -type f | sed 's|^\./||')
+    [ "$hit" -eq 1 ] || fail "Error: --only '$pat' matches nothing"
+  done
+  while IFS= read -r p; do
+    glob_ok "$p" "${pats[@]}" || continue
+    n=$((n + 1))
+    if has --apply; then
+      mkdir -p "$(dirname "$p")"
+      if has --backup && [ -e "$p" ]; then cp -p "$p" "$p.bak"; fi
+      cp -p "$tree/$p" "$p"
+    else
+      echo "would write $p"
+    fi
+  done < <(cd "$tree" && find . -type f | sed 's|^\./||' | sort)
+  echo "$n file(s)"
+}
+
+env_push() {
+  local pats=() p mode
+  [ ! -e "$S/push-fail" ] || fail "Error: push failed"
+  mapfile -t pats < <(opts --private)
+  echo "env push ${pats[*]}" >>"$S/push.log"
+  # shellcheck disable=SC1090
+  . "$FAKE_SCAN_LIB"
+  : >"$S/private.$envname"
+  rm -rf "$S/tree.$envname"
+  : >"$S/files.$envname"
+  while IFS= read -r p; do
+    mkdir -p "$S/tree.$envname/$(dirname "$p")"
+    cp -p "$p" "$S/tree.$envname/$p"
+    printf '%s %s\n' "$(stat -c %s "$p")" "$p" >>"$S/files.$envname"
+    for mode in '*.local' "${pats[@]}"; do
+      # shellcheck disable=SC2254
+      case "$p" in $mode) echo "$p" >>"$S/private.$envname" && break ;; esac
+    done
+  done < <(vault42_scan .)
+}
+
+case "${1:-}" in
+  --version) echo "42ctl $(cat "$S/version" 2>/dev/null || echo 0.1.16)" ;;
+  config)
+    echo "profile = default"
+    echo "authority = https://authority.example.test/api"
+    ;;
+  push) echo "push $*" >>"$S/push.log" ;;
+  auth)
+    case "$2" in
+      me)
+        [ ! -e "$S/net-down" ] || fail "Error: error sending request: dns error: failed to lookup address"
+        [ "$(cat "$S/session" 2>/dev/null)" != dead ] || fail "Error: HTTP 401 session expired"
+        echo "account 7704efb0-5a6a-4117-9cdd-a9265a8fc350 me@example.test"
+        ;;
+      status)
+        if [ -e "$S/nologin" ]; then
+          echo "not logged in"
+          exit 1
+        fi
+        if [ -e "$S/nocontract" ]; then echo "logged in"; else echo "logged in; contract $(cat "$S/contract" 2>/dev/null || echo univers42)"; fi
+        ;;
+      whoami)
+        [ ! -e "$S/locked" ] || fail "Error: keystore: could not unlock"
+        [ -n "${FT_PASSPHRASE:-}" ] || fail "Error: keystore: could not unlock (no passphrase)"
+        [ ! -f "$S/passphrase" ] || [ "$FT_PASSPHRASE" = "$(cat "$S/passphrase")" ] || fail "Error: keystore: could not unlock"
+        echo me
+        ;;
+      login)
+        [ ! -e "$S/login-fail" ] || fail "Error: login failed"
+        has --password && [ -n "${FT_PASSWORD:-}" ] && [ -n "${FT_LOGIN_EMAIL:-}" ] || fail "Error: --password needs FT_PASSWORD and an email"
+        echo alive >"$S/session"
+        ;;
+    esac
+    ;;
+  env)
+    case "$2" in
+      ls)
+        [ ! -e "$S/envs-fail" ] || fail "Error: HTTP 500"
+        echo "ID NAME"
+        if [ -f "$S/envs" ]; then cat "$S/envs"; else for k in "$S"/keys.*; do [ -e "$k" ] && echo "id-${k##*/keys.} ${k##*/keys.}"; done; fi
+        ;;
+      keys)
+        [ ! -e "$S/keys-fail" ] || fail "Error: HTTP 401 unauthorized"
+        [ -f "$S/keys.$envname" ] || fail "Error: environment '$envname' not found"
+        cat "$S/keys.$envname"
+        ;;
+      files) list_files ;;
+      pull) env_pull ;;
+      push) env_push ;;
+      secret)
+        key="${args[${#args[@]} - 1]}"
+        case "$3" in
+          get) cat "$S/secret/$key" 2>/dev/null || fail "Error: no secret $key" ;;
+          set) mkdir -p "$(dirname "$S/secret/$key")" && cat >"$S/secret/$key" ;;
+        esac
+        ;;
+    esac
+    ;;
+esac
+exit 0

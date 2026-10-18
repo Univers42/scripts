@@ -1,0 +1,156 @@
+#!/bin/bash
+# Stand-in for docker: volumes under $FAKE_DOCKER/volumes, containers in $FAKE_DOCKER/ps, and a
+# 42ctl-runner mode (no --entrypoint) that records user/network/mounts and execs $FAKE_42CTL.
+echo "$*" >>"$FAKE_DOCKER/argv.log"
+echo "docker $(env | grep -cE '^(FT_PASSPHRASE|VAULT42_PASSPHRASE|FT_PASSWORD|FT_EMAIL|FT_TENANT|FT_REGISTER_TOKEN|VAULT42_REGISTER_TOKEN|FT_S3_KEY|FT_S3_SECRET)=')" >>"${TOOLENV_LOG:-/dev/null}"
+vols="$FAKE_DOCKER/volumes"
+ps_file="$FAKE_DOCKER/ps"
+case "$1 $2" in
+  "volume ls")
+    ls -1 "$vols"
+    exit 0
+    ;;
+  "volume inspect")
+    [ -d "$vols/$3" ]
+    exit
+    ;;
+  "volume create")
+    mkdir -p "$vols/$3"
+    exit 0
+    ;;
+  "system df")
+    printf 'Images space usage:\n\nREPOSITORY   TAG   SIZE\n\nLocal Volumes space usage:\n\nVOLUME NAME   LINKS   SIZE\n'
+    for v in $(find "$vols" -mindepth 1 -maxdepth 1 -printf "%f\n" | sort); do
+      printf '%s   1   %s\n' "$v" "$(cat "$FAKE_DOCKER/sizes/$v" 2>/dev/null || echo 1MB)"
+    done
+    printf '\nBuild cache usage: 0B\n'
+    exit 0
+    ;;
+esac
+case "$1" in
+  info)
+    if [ "${FAKE_ROOTLESS:-0}" = 1 ]; then echo '[name=seccomp,profile=builtin name=rootless]'; else echo '[name=seccomp,profile=builtin]'; fi
+    exit 0
+    ;;
+  ps)
+    want="${4#volume=}"
+    awk -v v="$want" '$2 == v { print $1 }' "$ps_file"
+    exit 0
+    ;;
+  stop)
+    shift
+    for id; do
+      grep "^$id " "$ps_file" >>"$FAKE_DOCKER/stopped" || true
+      grep -v "^$id " "$ps_file" >"$ps_file.new" || true
+      mv "$ps_file.new" "$ps_file"
+    done
+    exit 0
+    ;;
+  start)
+    id="$2"
+    [ "${FAKE_START_FAIL:-}" != "$id" ] || exit 1
+    grep "^$id " "$FAKE_DOCKER/stopped" >>"$ps_file" || true
+    grep -v "^$id " "$FAKE_DOCKER/stopped" >"$FAKE_DOCKER/stopped.new" || true
+    mv "$FAKE_DOCKER/stopped.new" "$FAKE_DOCKER/stopped"
+    exit 0
+    ;;
+  inspect)
+    grep -q "^${4} " "$ps_file" && echo true || echo false
+    exit 0
+    ;;
+esac
+[ "$1" = run ] || exit 64
+shift
+maps=() entry="" image="" net="" user="" workdir="" fwd=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --rm) ;;
+    --network)
+      net="$2"
+      shift
+      ;;
+    --user)
+      user="$2"
+      shift
+      ;;
+    -w)
+      workdir="$2"
+      shift
+      ;;
+    -e)
+      fwd+=("$2")
+      shift
+      ;;
+    --entrypoint)
+      entry="$2"
+      shift
+      ;;
+    -v)
+      src="${2%%:*}"
+      rest="${2#*:}"
+      dst="${rest%%:*}"
+      case "$src" in */*) ;; *) src="$vols/$src" ;; esac
+      maps+=("$dst=$src")
+      shift
+      ;;
+    *)
+      image="$1"
+      shift
+      break
+      ;;
+  esac
+  shift
+done
+if [ -z "$entry" ] && [ "${1:-}" != --version ]; then
+  # A 42ctl-runner call: record the runner shape, then act as 42ctl with only the forwarded names.
+  printf 'user=%s net=%s workdir=%s image=%s fwd=%s maps=%s\n' "$user" "$net" "$workdir" "$image" "${fwd[*]}" "${maps[*]}" >>"$FAKE_DOCKER/runner.log"
+  for n in FT_PASSPHRASE FT_PASSWORD FT_EMAIL FT_TENANT FT_LOGIN_EMAIL FT_REGISTER_TOKEN VAULT42_REGISTER_TOKEN VAULT42_PASSPHRASE FT_S3_KEY FT_S3_SECRET; do
+    keep=0
+    for f in "${fwd[@]}"; do [ "${f%%=*}" != "$n" ] || keep=1; done
+    [ "$keep" = 1 ] || unset "$n"
+  done
+  [ -z "$workdir" ] || cd "$workdir" || exit 125
+  exec "${FAKE_42CTL:?}" "$@"
+fi
+if [ "${1:-}" = --version ]; then
+  echo "$image" >>"$FAKE_DOCKER/image.log"
+  [ "${FAKE_CTL_VERSION_FAIL:-0}" != 1 ] || {
+    echo "docker: pull access denied" >&2
+    exit 125
+  }
+  echo "${FAKE_CTL_VERSION-42ctl 0.1.16}"
+  exit 0
+fi
+if [ "${FAKE_BATCH_FAIL:-0}" = 1 ]; then
+  n=0
+  for m in "${maps[@]}"; do case "$m" in /v/*) n=$((n + 1)) ;; esac done
+  [ "$n" -le 1 ] || {
+    echo "too many mounts" >&2
+    exit 125
+  }
+fi
+[ "$net" = none ] || {
+  echo "no --network none" >&2
+  exit 65
+}
+args=()
+for a in "$@"; do
+  for m in "${maps[@]}"; do
+    a="$(printf '%s' "$a" | sed -E "s#(^|[ \"'[])${m%%=*}([]/ \"')]|\$)#\1${m#*=}\2#g")"
+  done
+  args+=("$a")
+done
+if [ "$entry" = tar ]; then
+  [ -z "${FAKE_TAR_SLEEP:-}" ] || sleep "$FAKE_TAR_SLEEP"
+  fail="${FAKE_TAR_FAIL:-0}"
+  for m in "${maps[@]}"; do [ -z "${FAKE_TAR_FAIL_VOL:-}" ] || [ "$m" != "/v=$vols/$FAKE_TAR_FAIL_VOL" ] || fail=1; done
+  if [ "$fail" = 1 ]; then
+    for a in "${args[@]}"; do case "$a" in */.volume-*.stale)
+      echo partial >"$a"
+      basename "$a" >"$FAKE_DOCKER/tmpname"
+      ;;
+    esac done
+    exit 2
+  fi
+fi
+exec "$entry" "${args[@]}"

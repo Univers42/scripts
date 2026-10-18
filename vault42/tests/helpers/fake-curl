@@ -1,0 +1,11 @@
+#!/bin/bash
+# Stand-in for curl: $FAKE_CURL_MODE is "http:CODE" (prints CODE like -w %{http_code}), or one of
+# dns refused tls timeout, which exit with curl's own codes 6 7 35 28. Argv is logged.
+echo "$*" >>"${FAKE_CURL_LOG:-/dev/null}"
+case "${FAKE_CURL_MODE:-http:200}" in
+  http:*) printf '%s' "${FAKE_CURL_MODE#http:}" ;;
+  dns) exit 6 ;;
+  refused) exit 7 ;;
+  tls) exit 35 ;;
+  timeout) exit 28 ;;
+esac
