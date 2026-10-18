@@ -109,6 +109,17 @@ count() {
   [ "$(count PLANT)" = 0 ]
 }
 
+# 42ctl 0.1.16 reads none of them (strings on the binary: 0 hits), so no level needs to forward them.
+@test "the CI session, keystore and contract blobs reach no level's child" {
+  plant
+  export VAULT42_SESSION_B64=PLANT-sess VAULT42_KEYSTORE_B64=PLANT-ks VAULT42_CONTRACT_B64=PLANT-ct
+  local level
+  for level in none hook keystore login register; do
+    seen "$level"
+    [ "$(count 'PLANT-sess\|PLANT-ks\|PLANT-ct')" = 0 ]
+  done
+}
+
 @test "an unknown level is refused" {
   run v42_with_creds nonsense true
   [ "$status" -eq 2 ]

@@ -7,6 +7,7 @@
 #   v42_cred_require WHAT  status 5 and a message naming the canonical variable when WHAT is unset.
 #   v42_with_creds LEVEL CMD…
 #                          run CMD in a subshell whose environment holds exactly LEVEL's credentials:
+#                            every level drops the CI blobs (V42_CI_BLOBS) as well
 #                            none     no credential of the five (and no S3 key)
 #                            hook     FT_PASSPHRASE
 #                            keystore FT_PASSPHRASE, plus FT_S3_KEY/FT_S3_SECRET when set
@@ -31,6 +32,10 @@ declare -gA V42_CRED_NAMES=(
 
 V42_CRED_ALL="FT_PASSPHRASE VAULT42_PASSPHRASE FT_PASSWORD FT_EMAIL FT_LOGIN_EMAIL FT_TENANT
 VAULT42_REGISTER_TOKEN FT_REGISTER_TOKEN FT_S3_KEY FT_S3_SECRET"
+
+# CI hands the session, keystore and contract over as these blobs. 42ctl 0.1.16 reads none of them
+# (strings on the binary: 0 hits), so no level forwards them; a hook would only be a way to read them.
+V42_CI_BLOBS="VAULT42_SESSION_B64 VAULT42_KEYSTORE_B64 VAULT42_CONTRACT_B64"
 
 v42_cred_name() {
   local name
@@ -67,7 +72,7 @@ v42_with_creds() {
   s3key="${FT_S3_KEY:-}"
   s3secret="${FT_S3_SECRET:-}"
   (
-    for name in $V42_CRED_ALL; do unset "$name"; done
+    for name in $V42_CRED_ALL $V42_CI_BLOBS; do unset "$name"; done
     case "$level" in
     none) ;;
     hook | keystore | login | register) [ -z "$passphrase" ] || export FT_PASSPHRASE="$passphrase" ;;

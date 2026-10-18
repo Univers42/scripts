@@ -8,7 +8,10 @@
 #                                own status is returned. An empty HOOK is a successful no-op.
 #
 # A hook is split into argv on whitespace and executed. It is NEVER handed to a shell, so quoting,
-# `$(…)`, `;`, `|` and `>` are literal characters of an argument, not syntax.
+# `$(…)`, `;`, `|` and `>` are literal characters of an argument, not syntax. Its first word must
+# resolve to an executable FILE and is run with `exec` in a clean child: a builtin, keyword or
+# function (`declare -p password`, `eval`, `. file`) would otherwise run inside vault42's own shell,
+# where the credential variables of v42_with_creds are still in scope.
 #
 # What makes a hook file safe: it is a regular file (not a symlink) inside ROOT, tracked by git, not
 # under a secrets/ directory, and not among the files the scan would upload. A hook that is none of
@@ -70,11 +73,28 @@ _v42_hook_check_file() {
     }
 }
 
+# Prints the executable file the hook's first word names: a path (absolute, or relative to ROOT) or
+# a PATH lookup. `type -P` skips builtins, keywords and functions, which is the point.
+_v42_hook_command() {
+  local root="$1" word="$2" path
+  case "$word" in
+  /*) path="$word" ;;
+  */*) path="$root/$word" ;;
+  *) path="$(type -P -- "$word")" ;;
+  esac
+  [ -n "$path" ] && [ -f "$path" ] && [ -x "$path" ] || {
+    _v42_hook_reject "$word" "its first word is not an executable file; a builtin or keyword would run inside vault42's own shell"
+    return 2
+  }
+  printf '%s' "$path"
+}
+
 v42_hook_check() {
   local root path token
   [ -n "$2" ] || return 0
   root="$(cd "$1" && pwd -P)"
   _v42_hook_tokens "$2"
+  path="$(_v42_hook_command "$root" "${V42_HOOK_ARGV[0]}")" || return 2
   for token in "${V42_HOOK_ARGV[@]}"; do
     path="$(_v42_hook_file "$root" "$token")" || continue
     _v42_hook_check_file "$root" "$path" || return 2
@@ -82,9 +102,10 @@ v42_hook_check() {
 }
 
 v42_hook_run() {
-  local root="$1" hook="$2" level="$3"
+  local root="$1" hook="$2" level="$3" command
   [ -n "$hook" ] || return 0
   v42_hook_check "$root" "$hook" || return 2
   _v42_hook_tokens "$hook"
-  (cd "$root" && v42_with_creds "$level" "${V42_HOOK_ARGV[@]}" </dev/null)
+  command="$(_v42_hook_command "$root" "${V42_HOOK_ARGV[0]}")" || return 2
+  (cd "$root" && v42_with_creds "$level" exec -- "$command" "${V42_HOOK_ARGV[@]:1}" </dev/null)
 }
