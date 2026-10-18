@@ -19,7 +19,7 @@
 S="${FAKE42:?FAKE42 unset}"
 args=("$@")
 
-if [ "$*" != "${*#env secret set}" ] && [ "${1:-}" = env ] && [ "${2:-}" = secret ] && [ "${3:-}" = set ]; then
+if [ "${1:-}" = env ] && [ "${2:-}" = secret ] && [ "${3:-}" = set ]; then
   :
 else
   if [ -t 0 ]; then
