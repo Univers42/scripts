@@ -92,7 +92,7 @@ teardown() { assert_no_stdin_violation; }
 }
 
 @test "C16: curl reaches the authority but 42ctl auth me fails, so doctor FAILs" {
-  echo dead >"$FAKE42/session"
+  touch "$FAKE42/net-down"
   FAKE_CURL_MODE=http:200 run "$V42" doctor
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL session"* ]]
@@ -100,7 +100,7 @@ teardown() { assert_no_stdin_violation; }
 }
 
 @test "C16: curl failures are explained, never decisive" {
-  echo dead >"$FAKE42/session"
+  touch "$FAKE42/net-down"
   local mode text
   for pair in "dns:DNS cannot resolve" "refused:refused the connection" "tls:TLS handshake" "timeout:did not answer within 8 seconds" "http:503:answered HTTP 503"; do
     mode="${pair%%:*}"
@@ -113,6 +113,37 @@ teardown() { assert_no_stdin_violation; }
     [ "$status" -eq 1 ]
     [[ "$output" == *"$text"* ]]
   done
+}
+
+@test "doctor: a logged-out machine (auth status exits 0) says so and names the fix" {
+  touch "$FAKE42/nologin"
+  run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL session"*"not logged in on this machine"*"vault42 login"* ]]
+  run grep -c "OK   session" <<<"$output"
+  [ "$output" = 0 ]
+}
+
+@test "doctor: an expired session (401) says expired, without blaming the network" {
+  echo dead >"$FAKE42/session"
+  FAKE_CURL_LOG="$BATS_TEST_TMPDIR/curl.log" run "$V42" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL session"*"the session expired"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/curl.log" ]
+}
+
+@test "doctor: a session without a contract warns" {
+  touch "$FAKE42/nocontract"
+  run "$V42" doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN contract"* ]]
+}
+
+@test "doctor: the authority URL is read from the 0.1.16 column format" {
+  touch "$FAKE42/net-down"
+  FAKE_CURL_LOG="$BATS_TEST_TMPDIR/curl.log" FAKE_CURL_MODE=http:200 run "$V42" doctor
+  run grep -c "authority.example.test" "$BATS_TEST_TMPDIR/curl.log"
+  [ "$output" != 0 ]
 }
 
 @test "C16: a healthy session never runs curl" {

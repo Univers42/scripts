@@ -6,9 +6,12 @@
 # check FAILed, else 0. The other credentials are needed only by `login`, so unset they are SKIP
 # and never fail a CI run.
 #
-# Caveat: the authority URL is read from the `authority` line of `42ctl config show`; a 42ctl that
-# words it differently makes the network explanation SKIP, never a FAIL. Caveat: the tenant check
-# greps `auth status` for the name, so it can only WARN, not prove.
+# Caveat: the session and contract verdicts read the wording of 42ctl 0.1.16 (`auth status` exits 0
+# and says "logged out" or "logged in — session and contract"; `auth me` says "not logged in" or
+# HTTP 401). A 42ctl that words them differently gets the generic "auth me failed" row, never a
+# false OK, because `auth me` failing is what decides. Caveat: the authority URL is the second
+# column of the `authority` line of `42ctl config show`; any other shape makes the network
+# explanation SKIP, never a FAIL.
 
 V42_DOC_FAILS=0
 
@@ -84,7 +87,7 @@ _doc_skip_keyed() {
 
 _doc_network() {
   local url why
-  url="$(v42_ctl none config show 2>/dev/null | sed -n 's/^authority *= *//p' | head -1)"
+  url="$(v42_ctl none config show 2>/dev/null | awk '$1 == "authority" { print ($2 == "=" ? $3 : $2); exit }')"
   if [ -z "$url" ]; then
     _doc_row SKIP network "the authority URL is not in \`42ctl config show\`"
     return 0
@@ -93,25 +96,40 @@ _doc_network() {
   _doc_row INFO network "$why"
 }
 
+_doc_not_logged_in() {
+  _doc_row FAIL session "not logged in on this machine: run \`vault42 login\` (needs FT_EMAIL, FT_PASSWORD, FT_TENANT)"
+}
+
+# `auth status` exits 0 even when logged out, so its words decide; `auth me` then proves the
+# server still accepts the session, and its error says why not.
 _doc_session() {
-  local status
+  local status me
   if ! status="$(v42_ctl none auth status 2>&1)"; then
-    _doc_row FAIL session "not logged in: run \`vault42 login\`"
+    _doc_row FAIL session "42ctl auth status failed: ${status%%$'\n'*}"
     return 1
   fi
-  if v42_ctl none auth me >/dev/null 2>&1; then
-    _doc_row OK session "the server accepts the session"
-  else
-    _doc_row FAIL session "42ctl auth me failed: the session is expired or the server is unreachable"
-    _doc_network
+  case "$status" in *"logged out"* | *"not logged in"*)
+    _doc_not_logged_in
+    return 1
+    ;;
+  esac
+  if ! me="$(v42_ctl none auth me 2>&1)"; then
+    case "$me" in
+    *"not logged in"*) _doc_not_logged_in ;;
+    *401* | *expired*) _doc_row FAIL session "the session expired: run \`vault42 login\`" ;;
+    *)
+      me="${me%%$'\n'*}"
+      _doc_row FAIL session "42ctl auth me failed: ${me:0:160}"
+      _doc_network
+      ;;
+    esac
     return 1
   fi
-  [ -n "$(v42_cred tenant)" ] || return 0
-  if grep -qF -- "$(v42_cred tenant)" <<<"$status"; then
-    _doc_row OK tenant "the session's contract matches FT_TENANT"
-  else
-    _doc_row WARN tenant "FT_TENANT is set but \`auth status\` does not show it"
-  fi
+  _doc_row OK session "the server accepts the session"
+  case "$status" in
+  *contract*) _doc_row OK contract "the session carries a contract" ;;
+  *) _doc_row WARN contract "no contract on this session: \`vault42 login\` takes one with FT_TENANT" ;;
+  esac
 }
 
 _doc_keystore() {
