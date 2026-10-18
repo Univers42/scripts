@@ -102,3 +102,13 @@ teardown() { assert_no_stdin_violation; }
   run v42_diff_table t secrets
   [ "$output" = '+ secrets/extra.pem' ]
 }
+
+@test "row path: the path of every row shape, without the size or mode suffix" {
+  [ "$(v42_diff_row_path '~ a.env 5->4 bytes')" = a.env ]
+  [ "$(v42_diff_row_path '~ dir/a b.env bytes')" = 'dir/a b.env' ]
+  [ "$(v42_diff_row_path '~ a.env mode 644->600')" = a.env ]
+  [ "$(v42_diff_row_path '+ x/y')" = x/y ]
+  [ "$(v42_diff_row_path '- x/y')" = x/y ]
+  run v42_diff_row_path 'restore with:'
+  [ "$status" -eq 1 ]
+}

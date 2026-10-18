@@ -70,10 +70,16 @@ v42_diff_table() {
 
 # v42_diff_row_path ROW: the path of a `+`, `-` or `~` row; status 1 for anything else.
 v42_diff_row_path() {
-  local changed='^~ (.*) ([0-9]+->[0-9]+ bytes|bytes|mode [0-9]+->[0-9]+)$'
-  if [[ "$1" =~ $changed ]]; then
-    printf '%s' "${BASH_REMATCH[1]}"
-  elif [[ "$1" == "+ "* || "$1" == "- "* ]]; then
+  local re
+  # One suffix per pattern, tried in turn: a single alternation lets the greedy path group swallow
+  # the "L->R" of a size row and leave only "bytes" as the suffix.
+  for re in '^~ (.*) [0-9]+->[0-9]+ bytes$' '^~ (.*) mode [0-9]+->[0-9]+$' '^~ (.*) bytes$'; do
+    if [[ "$1" =~ $re ]]; then
+      printf '%s' "${BASH_REMATCH[1]}"
+      return 0
+    fi
+  done
+  if [[ "$1" == "+ "* || "$1" == "- "* ]]; then
     printf '%s' "${1:2}"
   else
     return 1
