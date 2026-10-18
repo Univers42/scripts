@@ -27,12 +27,13 @@ teardown() { assert_no_stdin_violation; }
   [ "$(cat "$R/b.env")" = BBBB ]
 }
 
-@test "pull --only restores just that path" {
+@test "pull --only restores just that path, and says nothing of a hook the target lacks" {
   rm "$R/a.env"
   run "$V42" pull --apply --only b.env
   [ "$status" -eq 0 ]
   [ -e "$R/b.env" ]
   [ ! -e "$R/a.env" ]
+  [[ "$output" != *"post_pull not run"* ]]
 }
 
 @test "C6: pull --kind env is allowed on an env+secrets target and passes the env pattern to --only" {
@@ -83,6 +84,41 @@ teardown() { assert_no_stdin_violation; }
   add_conf "post_pull = scripts/after.sh"
   run "$V42" pull
   [ ! -e "$BATS_TEST_TMPDIR/ran" ]
+}
+
+@test "post_pull runs after a full --apply" {
+  add_hook after.sh "touch '$BATS_TEST_TMPDIR/ran'"
+  add_conf "post_pull = scripts/after.sh"
+  run "$V42" pull --apply
+  [ "$status" -eq 0 ]
+  [ -e "$BATS_TEST_TMPDIR/ran" ]
+}
+
+@test "pull --apply --only restores the file, skips post_pull and says how to run it" {
+  add_hook after.sh "touch '$BATS_TEST_TMPDIR/ran'"
+  add_conf "post_pull = scripts/after.sh"
+  run "$V42" pull --apply --only b.env
+  [ "$status" -eq 0 ]
+  [ "$(cat "$R/b.env")" = BBBB ]
+  [ ! -e "$BATS_TEST_TMPDIR/ran" ]
+  [[ "$output" == *"post_pull not run: --only restores the files you named"* ]]
+  [[ "$output" == *"run it yourself if you need it: scripts/after.sh"* ]]
+}
+
+@test "pull --only with a misconfigured post_pull is still refused" {
+  add_conf "post_pull = scripts/untracked.sh"
+  run "$V42" pull --apply --only b.env
+  [ "$status" -eq 2 ]
+  [ ! -e "$R/b.env" ]
+}
+
+@test "a kind-scoped pull builds its own --only list and still runs post_pull" {
+  add_hook after.sh "touch '$BATS_TEST_TMPDIR/ran'"
+  add_conf "post_pull = scripts/after.sh"
+  run "$V42" --kind env pull --apply
+  [ "$status" -eq 0 ]
+  [ -e "$BATS_TEST_TMPDIR/ran" ]
+  [[ "$output" != *"post_pull not run"* ]]
 }
 
 @test "G4: a post_pull hook that runs a whole pull is not blocked either" {

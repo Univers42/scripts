@@ -199,10 +199,11 @@ _pull_total_bytes() {
 }
 
 _pull_one() {
-  local target="$1" apply="$2" root pattern total
+  local target="$1" apply="$2" root pattern total hook
   local -a args=()
   root="$(v42_cfg "$target" root)"
-  v42_hook_check "$root" "$(v42_cfg "$target" post_pull)" || return 2
+  hook="$(v42_cfg "$target" post_pull)"
+  v42_hook_check "$root" "$hook" || return 2
   v42_ctl_gate read || true
   if [ "${#V42_PULL_ONLY[@]}" -gt 0 ]; then
     for pattern in "${V42_PULL_ONLY[@]}"; do args+=(--only "$pattern"); done
@@ -222,7 +223,14 @@ _pull_one() {
   }
   # The hook may run vault42 itself (secret get), so it must not meet this run's lock.
   vault42_unlock_lock
-  v42_hook_run "$root" "$(v42_cfg "$target" post_pull)" hook || {
+  # The hook rebuilds from a whole restored environment; a user --only restores a few files, and
+  # running it then re-pointed a live .env.local at the wrong backend (2026-10-18). A kind's own
+  # --only list is not the user's, so it keeps the hook.
+  if [ "${#V42_PULL_ONLY[@]}" -gt 0 ]; then
+    [ -z "$hook" ] || note "post_pull not run: --only restores the files you named, not the environment the hook rebuilds from; run it yourself if you need it: $hook"
+    return 0
+  fi
+  v42_hook_run "$root" "$hook" hook || {
     note "the post_pull hook failed; the files were restored"
     return 1
   }

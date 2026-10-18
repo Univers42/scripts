@@ -21,7 +21,7 @@ defaults to `env secrets`: volumes are never implied. Start from [`vault42.conf.
 | `login` | log in with `FT_EMAIL`, `FT_PASSWORD`, `FT_TENANT` |
 | `keys ls` | who holds a key to each target's env |
 | `list`, `diff`, `find PATTERN` | read-only views of the vault |
-| `pull [--apply] [--only PATH]...` | preview, or restore, the vault's files; `post_pull` runs after `--apply` |
+| `pull [--apply] [--only PATH]...` | preview, or restore, the vault's files; `post_pull` runs after `--apply`, but not with `--only` (a partial restore is not the environment the hook rebuilds from) |
 | `push [--yes] [--personal] [--share PATH] [--private PAT] [FILE...]` | replace the vault's tree with this checkout, or push named files |
 | `secret get\|set PATH` | one vault secret; `set` reads stdin |
 | `config show` | the effective configuration |
