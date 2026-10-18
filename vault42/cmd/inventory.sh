@@ -2,8 +2,8 @@
 # inventory.sh — `vault42 list`, `diff` and `find`: read-only views of the vault. Defines functions
 # only; sourced by vault42.sh.
 #
-# Caveat: `diff` compares sizes, so a same-size edit is invisible to it; `push FILE` and the
-# post-push verify compare bytes. Caveat: `find` matches the pattern as a shell glob over the vault's
+# Caveat: `diff` compares sizes, so a same-size edit is invisible to it; `push FILE` compares bytes, and the
+# post-push verify of a full push compares sizes and the private set. Caveat: `find` matches the pattern as a shell glob over the vault's
 # paths, or as a substring when it holds no glob character.
 
 # _inv_fixes TABLE: the restore command for every path the vault has and this checkout lacks or

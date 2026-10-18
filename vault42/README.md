@@ -2,7 +2,7 @@
 
 Move a project's environment files, secrets and docker volumes through a 42ctl vault, from one
 config file, with every credential read from the environment. Bash 4.4+, no dependency beyond
-`git`, `flock`, `awk`, `tar`/`gzip` and 42ctl (native, or a pinned docker image).
+`git`, `flock`, `awk`, GNU `tar` 1.29+ (`--verbatim-files-from`; busybox tar lacks it) / `gzip` and 42ctl (native, or a pinned docker image).
 
 Tested against 42ctl 0.1.15 and 0.1.16 through a fake; see [What was not verified](#what-was-not-verified).
 
@@ -105,7 +105,7 @@ passphrase exits 0. A reachable authority with a failing `42ctl auth me` is a `F
   added, so no variable weakens a guard (ADR 0001).
 - It does not push volumes unless `--kind volumes` is given, and does not mix volumes with other kinds in a target.
 - `push --kind env` on a target holding `env secrets` exits 2: `env push` replaces the whole tree.
-- It does not run a hook that is under `secrets/`, in the scan, or untracked (exit 2). Hooks are exec'd as argv, never through a shell.
+- It does not run a hook that is under `secrets/`, in the scan, or untracked (exit 2). Hooks are exec'd as argv, never through a shell, and the first word must be an executable file (a builtin such as `declare` or `eval` is refused, exit 2).
 - It does not capture volumes of a staging or prod stack, whatever the flags.
 - It does not fall back to the personal vault on a failed key check. That needs `personal_fallback = yes`
   in the config and `--personal` on the line; `--yes` alone never does it. It then exits 3.
@@ -113,9 +113,11 @@ passphrase exits 0. A reachable authority with a failing `42ctl auth me` is a `F
 
 ## Safety behaviours worth knowing
 
-- A mutating command takes a lock; a second one exits 4. `post_pull` runs after the lock is released,
+- A mutating command takes a lock; a second one exits 4 (a missing `flock` or an unwritable state dir exits 1 with the cause). `post_pull` runs after the lock is released,
   so a hook may call `vault42 secret get` without deadlocking.
-- Push compares sizes for the table and re-diffs after the confirm. File-mode push compares bytes and mode.
+- Push compares sizes for the table and re-diffs after the confirm; its post-push verify compares sizes and the private set, not bytes. File-mode push (`push FILE`, git checkouts only) compares bytes and mode before pushing.
+- `stage_unscanned_as` and `stage_dir_as` must be clean relative paths (no `./`, `..`, `//`, leading `/`) that the scan takes (under `secrets/` or `*.secrets`); anything else is refused.
+- `push FILE`, `--drop`, `--share` and `--private` are team-push options; the personal routes exit 2 on them.
 - Every restore hint is `vault42 pull --apply --only PATH`, never a bare `pull --apply`.
 - State (locks, the stopped-container record, the restore-drill marker) lives under the git common dir
   (`<git-common-dir>/vault42/`), so a linked worktree or a submodule shares it and the scan never sees it.
@@ -137,8 +139,8 @@ Nothing here has run against a live vault. The first live push is yours, on a th
 - A2: a push replaces the newest tree. Files another member pushed as private are invisible to you,
   and whether the server keeps them across your push is unverified. The confirm prints this every time.
 - A3: `login` passes `--password` bare and trusts 42ctl to read `FT_PASSWORD` from its environment.
-- `diff` compares sizes: a same-size edit is invisible to it. `push FILE`, the verify after a push and
-  the volumes drill compare bytes.
+- `diff` compares sizes: a same-size edit is invisible to it. `push FILE` and the volumes drill compare
+  bytes; the verify after a full push compares sizes and the private set.
 - Private-file ceiling is 4128768 bytes; larger files need the `FT_S3_*` pair.
 - The scanner is name-based (`*.env*`, `secrets/` directories); a secret in any other filename is not seen.
 - Volumes: sizes come from `docker system df -v` (about 0.5 percent off; compression ignored). A capture is a
