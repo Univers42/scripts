@@ -44,7 +44,9 @@ _v42_archive() {
   tmp="$(dirname "$final")/.$(basename "$final").stale"
   mkdir -p "$(dirname "$final")"
   rm -f "$tmp"
-  if ! v42_with_creds none tar --numeric-owner -C "$root" -czf "$tmp" -T "$list"; then
+  # --verbatim-files-from: without it GNU tar reads a listed name that starts with `-` as an option
+  # (`--exclude=*` once emptied the archive with exit 0).
+  if ! v42_with_creds none tar --numeric-owner --verbatim-files-from -C "$root" -czf "$tmp" -T "$list"; then
     rm -f "$tmp"
     note "tar failed for $final; nothing staged"
     return 1
@@ -76,6 +78,7 @@ _v42_stage_one() {
   list="$(mktemp)"
   "$generator" "$root" "$dir" >"$list"
   if [ ! -s "$list" ]; then
+    rm -f "$root/$as"
     note "nothing to archive for $as"
   else
     _v42_archive "$root" "$root/$as" "$list" || rc=1

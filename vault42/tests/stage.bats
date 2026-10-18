@@ -112,3 +112,29 @@ setup() {
   run v42_stage_paths t
   [ "$output" = $'secrets/a.tgz\nsecrets/b.tgz' ]
 }
+
+# GNU tar reads a `-T` line that starts with `-` as an option: a file named `--exclude=*` turned the
+# archive empty with exit 0.
+@test "stage: a file name that looks like a tar option is archived as a name" {
+  printf 'data' >"$R/cache.dump"
+  printf 'opt' >"$R/--exclude=x*"
+  printf '/--exclude=x*\n' >>"$R/.gitignore"
+  write_conf "$R" "stage_unscanned_as = secrets/extra.tgz"
+  v42_config_load "$CONF"
+  run v42_stage t
+  [ "$status" -eq 0 ]
+  run tar -tzf "$R/secrets/extra.tgz"
+  [ "$output" = $'--exclude=x*\ncache.dump' ]
+}
+
+@test "stage: with nothing left to archive the previous archive is removed, not pushed again" {
+  printf 'data' >"$R/cache.dump"
+  write_conf "$R" "stage_unscanned_as = secrets/extra.tgz"
+  v42_config_load "$CONF"
+  v42_stage t
+  [ -e "$R/secrets/extra.tgz" ]
+  rm "$R/cache.dump"
+  run v42_stage t
+  [ "$status" -eq 0 ]
+  [ ! -e "$R/secrets/extra.tgz" ]
+}
