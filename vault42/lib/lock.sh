@@ -31,4 +31,5 @@ vault42_lock() {
 
 vault42_unlock_lock() {
   [ -z "${VAULT42_LOCK_FD:-}" ] || exec {VAULT42_LOCK_FD}>&-
+  unset VAULT42_LOCK_FD
 }

@@ -62,3 +62,34 @@ write_conf() {
   printf '%s\n' '[t]' 'org = o' 'project = p' 'env = e' "root = $root" "$@" >"$CONF"
   export CONF
 }
+
+# commit_all REPO — track everything so hooks pass the "tracked file" check.
+commit_all() {
+  git -C "$1" add -A
+  git -C "$1" -c user.email=t@example.test -c user.name=t commit -qm fixture
+}
+
+# proj_setup — a repo with a.env, b.env and secrets/k.env, a one-target config, a signed-in fake.
+# Sets R, CONF and V42; the vault starts without a tree.
+proj_setup() {
+  R="$(make_repo)"
+  printf 'AAAA' >"$R/a.env"
+  printf 'BBBB' >"$R/b.env"
+  mkdir -p "$R/secrets" "$R/scripts"
+  printf 'KKKK' >"$R/secrets/k.env"
+  printf 'secrets/stage.tgz\ncache.dump\n' >"$R/.gitignore"
+  write_conf "$R" "private = secrets/*.env"
+  export VAULT42_CONFIG="$CONF" FT_PASSPHRASE=pass-planted-1111
+  printf '7704efb0-5a6a-4117-9cdd-a9265a8fc350 active\nother active\n' >"$FAKE42/keys.e"
+  V42="$V42_ROOT_DIR/vault42.sh"
+}
+
+# add_conf LINE… — append keys to the one target of $CONF.
+add_conf() { printf '%s\n' "$@" >>"$CONF"; }
+
+# add_hook NAME BODY — a tracked, executable script under scripts/.
+add_hook() {
+  printf '#!/bin/sh\n%s\n' "$2" >"$R/scripts/$1"
+  chmod +x "$R/scripts/$1"
+  commit_all "$R"
+}

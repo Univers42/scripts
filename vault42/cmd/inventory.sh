@@ -10,15 +10,9 @@
 # differs on. Always --only: a bare `pull --apply` would overwrite everything (C5).
 _inv_fixes() {
   local line path shown=0
-  local changed='^~ (.*) ([0-9]+->[0-9]+ bytes|bytes|mode [0-9]+->[0-9]+)$'
   while IFS= read -r line; do
-    if [[ "$line" =~ $changed ]]; then
-      path="${BASH_REMATCH[1]}"
-    elif [[ "$line" == "- "* ]]; then
-      path="${line#- }"
-    else
-      continue
-    fi
+    [ "${line:0:2}" != "+ " ] || continue
+    path="$(v42_diff_row_path "$line")" || continue
     shown=$((shown + 1))
     if [ "$shown" -gt 20 ]; then
       echo "  … and more"

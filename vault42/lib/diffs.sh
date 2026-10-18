@@ -68,6 +68,18 @@ v42_diff_table() {
   return "$rc"
 }
 
+# v42_diff_row_path ROW: the path of a `+`, `-` or `~` row; status 1 for anything else.
+v42_diff_row_path() {
+  local changed='^~ (.*) ([0-9]+->[0-9]+ bytes|bytes|mode [0-9]+->[0-9]+)$'
+  if [[ "$1" =~ $changed ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+  elif [[ "$1" == "+ "* || "$1" == "- "* ]]; then
+    printf '%s' "${1:2}"
+  else
+    return 1
+  fi
+}
+
 v42_diff_counts() {
   printf '%s added, %s dropped, %s changed\n' "$(count_lines "$(grep '^+ ' <<<"$1")")" \
     "$(count_lines "$(grep '^- ' <<<"$1")")" "$(count_lines "$(grep '^~ ' <<<"$1")")"
