@@ -38,7 +38,9 @@ import glob
 
 
 def fix_preproc_indent(filepath):
-    """Fix preprocessor indentation based on nesting depth."""
+    """Fix indentation in a regular file without following symlinks."""
+    if os.path.islink(filepath) or not os.path.isfile(filepath):
+        return False
     with open(filepath, 'rb') as f:
         raw = f.read()
 
@@ -113,7 +115,7 @@ def main():
 
     modified = 0
     for f in files:
-        if not os.path.isfile(f):
+        if not os.path.isfile(f) or os.path.islink(f):
             continue
         if fix_preproc_indent(f):
             modified += 1
