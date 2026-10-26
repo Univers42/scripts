@@ -587,15 +587,16 @@ def _match_sol_block(text, i, lang):
                                        or not text[i + len(op)].isalnum()
                                        or op[-1].isalnum()):
             k = i + len(op)
+            p = k
             while True:
-                p = text.find(cl, k)
+                p = text.find(cl, p)
                 if p == -1:
                     le = -1
                     break
                 if p == 0 or text[p - 1] == "\n":
                     le = text.find("\n", p)
                     break
-                k = p + len(cl)
+                p += len(cl)
             return len(text) if le == -1 else le
     if lang.pod and text[i] == "=" and i + 1 < len(text) \
             and text[i + 1].isalpha():
