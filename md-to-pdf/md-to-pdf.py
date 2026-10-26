@@ -819,8 +819,11 @@ def convert(args: argparse.Namespace) -> None:
     md_text = fix_list_separation(md_text)
 
     if args.no_cache and CACHE_DIR.is_dir():
+        # Unlink symlink entries explicitly before render_mermaid writes files.
         for cache_file in CACHE_DIR.iterdir():
-            if cache_file.is_symlink() or cache_file.is_file():
+            if cache_file.is_symlink():
+                cache_file.unlink()
+            elif cache_file.is_file():
                 cache_file.unlink()
         print("🗑  Cleared diagram cache")
 
