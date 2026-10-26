@@ -263,11 +263,7 @@ def fix_for_to_while(lines):
 
             # Output init statement before the while
             if init:
-                # If init is a declaration, it should already be at top
-                if not any(init.startswith(t) for t in ['int ', 'unsigned ', 'size_t ', 'char ']):
-                    result.append(f'{indent}{init};')
-                else:
-                    result.append(f'{indent}{init};')
+                result.append(f'{indent}{init};')
 
             # Output while condition
             if not cond:
