@@ -191,7 +191,9 @@ def apply_renames(content, renames):
 
 
 def fix_file(filepath):
-    """Apply all norminette fixes to a single file."""
+    """Apply fixes without following symlinks or opening non-files."""
+    if os.path.islink(filepath) or not os.path.isfile(filepath):
+        return False
     with open(filepath, 'r') as f:
         content = f.read()
 
@@ -214,9 +216,14 @@ def main():
         d = sys.argv[1]
 
     count = 0
+    if not os.path.isdir(d):
+        print(f"Not a directory: {d}", file=sys.stderr)
+        return 2
     for f in sorted(os.listdir(d)):
-        if f.endswith('.c') or f.endswith('.h'):
+        if f.endswith(('.c', '.h')):
             path = os.path.join(d, f)
+            if os.path.islink(path) or not os.path.isfile(path):
+                continue
             if fix_file(path):
                 count += 1
                 print(f"Fixed: {f}")
