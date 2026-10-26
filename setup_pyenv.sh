@@ -26,6 +26,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VENV_DIR="$PROJECT_ROOT/.pyenv"
 
+# Do not install dependencies into a directory redirected by a symlink.
+if [ -L "$VENV_DIR" ]; then
+    printf 'Refusing symlinked virtual environment path: %s\\n' "$VENV_DIR" >&2
+    exit 1
+fi
+
 # ── colors ───────────────────────────────────────────────────────────────────
 GREEN='\033[92m'
 CYAN='\033[96m'
@@ -37,7 +43,7 @@ info()  { printf "  ${DIM}→${RESET} %s\n" "$*"; }
 ok()    { printf "  ${GREEN}●${RESET} ${BOLD}%s${RESET}\n" "$*"; }
 
 # ── create venv ──────────────────────────────────────────────────────────────
-if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python3" ]; then
+if [ -d "$VENV_DIR" ] && [ ! -L "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python3" ]; then
     info "venv already exists at ${CYAN}.pyenv/${RESET}"
 else
     info "creating venv at ${CYAN}.pyenv/${RESET}"
