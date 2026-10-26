@@ -754,8 +754,8 @@ def convert(args: argparse.Namespace) -> None:
             print(f"\n   ⚠  No covers found in {COVERS_DIR}\n")
         return
 
-    input_path = args.input
-    output_candidate = args.output or re.sub(r"\.md$", ".pdf", input_path)
+    input_path = str(Path(args.input).resolve())
+    output_candidate = args.output or re.sub(r"\.md$", ".pdf", args.input)
     try:
         output_path = str(_validated_output_path(output_candidate, input_path))
     except ValueError as exc:
