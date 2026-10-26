@@ -973,16 +973,26 @@ def collect(paths, args):
 
     found = []
     for root in paths:
-        if os.path.isfile(root):
+        if os.path.isfile(root) and not os.path.islink(root):
             found.append(root)
             continue
-        for base, dirs, names in os.walk(root):
-            dirs[:] = sorted(d for d in dirs
-                             if d not in excl_dirs
-                             and not excluded(os.path.join(base, d)))
+        if os.path.islink(root) or not os.path.isdir(root):
+            continue
+        for base, dirs, names in os.walk(root, followlinks=False):
+            dirs[:] = sorted(
+                d for d in dirs
+                if d not in excl_dirs
+                and not os.path.islink(os.path.join(base, d))
+                and not excluded(os.path.join(base, d))
+            )
             for nm in sorted(names):
                 full = os.path.join(base, nm)
-                if not excluded(full) and not _skip_name(nm):
+                if (
+                    not os.path.islink(full)
+                    and os.path.isfile(full)
+                    and not excluded(full)
+                    and not _skip_name(nm)
+                ):
                     found.append(full)
     return found
 
