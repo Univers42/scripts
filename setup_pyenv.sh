@@ -56,7 +56,7 @@ source "$VENV_DIR/bin/activate"
 
 # ── upgrade pip silently ─────────────────────────────────────────────────────
 info "upgrading pip"
-pip install --upgrade pip --quiet 2>/dev/null
+pip install --upgrade --only-binary=:all: pip --quiet 2>/dev/null
 
 # ── install dependencies ─────────────────────────────────────────────────────
 DEPS=(cpplint clang-format)
@@ -66,7 +66,7 @@ for dep in "${DEPS[@]}"; do
         info "$dep ${DIM}already installed${RESET}"
     else
         info "installing ${CYAN}$dep${RESET}"
-        pip install "$dep" --quiet
+        pip install --only-binary=:all: "$dep" --quiet
     fi
 done
 
