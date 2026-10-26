@@ -714,6 +714,24 @@ def build_html(
 </html>"""
 
 
+def _validated_output_path(candidate: str, input_path: str) -> Path:
+    """Resolve an output path and reject traversal beyond trusted working roots.
+
+    Normal workflows write beside the input or in the current working directory.
+    Reject symlink destinations as well, so a generated file cannot be redirected
+    outside those roots by a pre-existing link.
+    """
+    requested = Path(candidate)
+    if requested.is_symlink():
+        raise ValueError(f"Refusing symlink output path: {candidate}")
+
+    resolved = requested.resolve()
+    trusted_roots = (Path.cwd().resolve(), Path(input_path).resolve().parent)
+    if not any(resolved == root or root in resolved.parents for root in trusted_roots):
+        raise ValueError(f"Output path escapes the working/input directories: {candidate}")
+    return resolved
+
+
 def convert(args: argparse.Namespace) -> None:
     """Run the full Markdown-to-PDF conversion pipeline.
 
@@ -737,7 +755,11 @@ def convert(args: argparse.Namespace) -> None:
         return
 
     input_path = args.input
-    output_path = args.output or re.sub(r"\.md$", ".pdf", input_path)
+    output_candidate = args.output or re.sub(r"\.md$", ".pdf", input_path)
+    try:
+        output_path = str(_validated_output_path(output_candidate, input_path))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     theme_path = Path(args.theme) if args.theme else DEFAULT_THEME
     cover_name = args.cover if args.cover else DEFAULT_COVER
     today = date.today().strftime("%B %d, %Y")
@@ -822,8 +844,12 @@ def convert(args: argparse.Namespace) -> None:
         cover_name,
     )
 
-    html_path = re.sub(r"\.pdf$", ".html", output_path)
-    Path(html_path).write_text(full_html, encoding="utf-8")
+    html_candidate = re.sub(r"\.pdf$", ".html", output_path)
+    try:
+        html_path = _validated_output_path(html_candidate, input_path)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    html_path.write_text(full_html, encoding="utf-8")
     print(f"🔍  Debug HTML → {html_path}")
 
     print("\n🖨  Generating PDF with WeasyPrint…")
