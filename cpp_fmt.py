@@ -53,10 +53,14 @@ def find_cpp_files(roots):
             if root.endswith(exts):
                 files.append(root)
             continue
-        for dp, _, fnames in os.walk(root):
+        for dp, dirs, fnames in os.walk(root, followlinks=False):
+            dirs[:] = sorted(
+                d for d in dirs if not os.path.islink(os.path.join(dp, d))
+            )
             for fn in sorted(fnames):
-                if fn.endswith(exts):
-                    files.append(os.path.join(dp, fn))
+                candidate = os.path.join(dp, fn)
+                if fn.endswith(exts) and not os.path.islink(candidate):
+                    files.append(candidate)
     return files
 
 
@@ -200,6 +204,9 @@ def main():
 
     modified = 0
     for f in files:
+        if not os.path.isfile(f) or os.path.islink(f):
+            print(f"Skip (not a regular file): {f}")
+            continue
         changed = format_file(f, dry_run=dry_run)
         if changed:
             modified += 1

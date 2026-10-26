@@ -589,23 +589,26 @@ def build_cover_html(
 
 
 def resolve_cover(name: str) -> Path | None:
-    """Resolve a cover name to its CSS file path.
+    """Resolve a bundled cover name without allowing path traversal.
 
-    Accepts either a bare name (e.g. ``"noir"``) that is looked up in
-    :data:`COVERS_DIR`, or a direct filesystem path ending in ``.css``.
-
-    :param name: Cover name or CSS file path.
-    :returns: Resolved :class:`~pathlib.Path`, or ``None`` if not found.
+    Explicit CSS paths remain supported for backwards compatibility. A bare
+    cover name is an identifier and must not contain directory components.
     """
     if not name:
         return None
-    p = Path(name)
-    if p.suffix == ".css" and p.exists():
-        return p
-    candidate = COVERS_DIR / f"{name}.css"
-    if candidate.exists():
-        return candidate
-    return None
+
+    path = Path(name)
+    if path.suffix == ".css":
+        return path.resolve() if path.is_file() else None
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+        return None
+
+    candidate = (COVERS_DIR / f"{name}.css").resolve()
+    try:
+        candidate.relative_to(COVERS_DIR.resolve())
+    except ValueError:
+        return None
+    return candidate if candidate.is_file() else None
 
 
 def list_covers() -> list[str]:
@@ -638,7 +641,8 @@ def load_css(
     :param cover_name: Cover style name or ``None`` to skip.
     :returns: Combined CSS string ready for ``<style>`` injection.
     """
-    if not theme_path.exists():
+    theme_path = theme_path.resolve()
+    if not theme_path.is_file():
         print(f"   ⚠  Theme not found: {theme_path} — using minimal fallback")
         css = "body { font-family: sans-serif; font-size: 10pt; }"
     else:
@@ -710,6 +714,30 @@ def build_html(
 </html>"""
 
 
+def _has_symlink_component(path: Path) -> bool:
+    """Return whether any existing component of a path is a symbolic link."""
+    absolute = Path(os.path.abspath(path))
+    current = Path(absolute.anchor)
+    for component in absolute.parts[1:]:
+        current = current / component
+        if current.is_symlink():
+            return True
+    return False
+
+
+def _validated_output_path(candidate: str, input_path: str) -> Path:
+    """Resolve an output path and reject traversal or symlinked ancestors."""
+    requested = Path(candidate)
+    if _has_symlink_component(requested):
+        raise ValueError(f"Refusing symlink output path: {candidate}")
+
+    resolved = requested.resolve()
+    trusted_roots = (Path.cwd().resolve(), Path(input_path).resolve().parent)
+    if not any(resolved == root or root in resolved.parents for root in trusted_roots):
+        raise ValueError(f"Output path escapes the working/input directories: {candidate}")
+    return resolved
+
+
 def convert(args: argparse.Namespace) -> None:
     """Run the full Markdown-to-PDF conversion pipeline.
 
@@ -732,8 +760,12 @@ def convert(args: argparse.Namespace) -> None:
             print(f"\n   ⚠  No covers found in {COVERS_DIR}\n")
         return
 
-    input_path = args.input
-    output_path = args.output or re.sub(r"\.md$", ".pdf", input_path)
+    input_path = str(Path(args.input).resolve())
+    output_candidate = args.output or re.sub(r"\.md$", ".pdf", args.input)
+    try:
+        output_path = str(_validated_output_path(output_candidate, input_path))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     theme_path = Path(args.theme) if args.theme else DEFAULT_THEME
     cover_name = args.cover if args.cover else DEFAULT_COVER
     today = date.today().strftime("%B %d, %Y")
@@ -786,9 +818,10 @@ def convert(args: argparse.Namespace) -> None:
     md_text = fix_blockquote_linebreaks(md_text)
     md_text = fix_list_separation(md_text)
 
-    if args.no_cache and CACHE_DIR.exists():
-        for f in CACHE_DIR.iterdir():
-            f.unlink()
+    if args.no_cache and CACHE_DIR.is_dir():
+        for cache_file in CACHE_DIR.iterdir():
+            if cache_file.is_symlink() or cache_file.is_file():
+                cache_file.unlink()
         print("🗑  Cleared diagram cache")
 
     count = len(re.findall(r"```mermaid", md_text))
@@ -816,8 +849,12 @@ def convert(args: argparse.Namespace) -> None:
         cover_name,
     )
 
-    html_path = re.sub(r"\.pdf$", ".html", output_path)
-    Path(html_path).write_text(full_html, encoding="utf-8")
+    html_candidate = re.sub(r"\.pdf$", ".html", output_path)
+    try:
+        html_path = _validated_output_path(html_candidate, input_path)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    html_path.write_text(full_html, encoding="utf-8")
     print(f"🔍  Debug HTML → {html_path}")
 
     print("\n🖨  Generating PDF with WeasyPrint…")
@@ -865,8 +902,10 @@ if __name__ == "__main__":
     if not args.input:
         p.error("the following arguments are required: input")
 
-    if not Path(args.input).exists():
+    input_file = Path(args.input).resolve()
+    if not input_file.is_file():
         print(f"✗  File not found: {args.input}")
         sys.exit(1)
+    args.input = str(input_file)
 
     convert(args)

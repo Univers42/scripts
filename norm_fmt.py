@@ -263,11 +263,7 @@ def fix_for_to_while(lines):
 
             # Output init statement before the while
             if init:
-                # If init is a declaration, it should already be at top
-                if not any(init.startswith(t) for t in ['int ', 'unsigned ', 'size_t ', 'char ']):
-                    result.append(f'{indent}{init};')
-                else:
-                    result.append(f'{indent}{init};')
+                result.append(f'{indent}{init};')
 
             # Output while condition
             if not cond:
@@ -425,7 +421,9 @@ def fix_space_before_func(lines):
 
 
 def format_file(filepath, dry_run=False):
-    """Apply all norminette fixes to a file."""
+    """Apply fixes to a regular file without following symlinks."""
+    if os.path.islink(filepath) or not os.path.isfile(filepath):
+        return False
     with open(filepath, 'r') as f:
         content = f.read()
 
@@ -466,8 +464,8 @@ def main():
 
     modified = 0
     for f in files:
-        if not os.path.isfile(f):
-            print(f"Skip (not found): {f}")
+        if not os.path.isfile(f) or os.path.islink(f):
+            print(f"Skip (not a regular file): {f}")
             continue
         changed = format_file(f, dry_run=dry_run)
         if changed:

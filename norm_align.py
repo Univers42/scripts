@@ -163,7 +163,9 @@ def align_group(group):
 
 
 def fix_file(filepath):
-    """Fix variable declaration alignment in a file. Returns True if changed."""
+    """Fix alignment in a regular file without following symlinks."""
+    if os.path.islink(filepath) or not os.path.isfile(filepath):
+        return False
     with open(filepath, 'r') as f:
         lines = f.read().split('\n')
 
@@ -211,7 +213,7 @@ def main():
 
     modified = 0
     for f in files:
-        if not os.path.isfile(f):
+        if not os.path.isfile(f) or os.path.islink(f):
             continue
         if fix_file(f):
             modified += 1
