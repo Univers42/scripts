@@ -714,15 +714,21 @@ def build_html(
 </html>"""
 
 
-def _validated_output_path(candidate: str, input_path: str) -> Path:
-    """Resolve an output path and reject traversal beyond trusted working roots.
+def _has_symlink_component(path: Path) -> bool:
+    """Return whether any existing component of a path is a symbolic link."""
+    absolute = Path(os.path.abspath(path))
+    current = Path(absolute.anchor)
+    for component in absolute.parts[1:]:
+        current = current / component
+        if current.is_symlink():
+            return True
+    return False
 
-    Normal workflows write beside the input or in the current working directory.
-    Reject symlink destinations as well, so a generated file cannot be redirected
-    outside those roots by a pre-existing link.
-    """
+
+def _validated_output_path(candidate: str, input_path: str) -> Path:
+    """Resolve an output path and reject traversal or symlinked ancestors."""
     requested = Path(candidate)
-    if requested.is_symlink():
+    if _has_symlink_component(requested):
         raise ValueError(f"Refusing symlink output path: {candidate}")
 
     resolved = requested.resolve()
