@@ -216,7 +216,7 @@ def main():
         d = sys.argv[1]
 
     count = 0
-    if not os.path.isdir(d):
+    if os.path.islink(d) or not os.path.isdir(d):
         print(f"Not a directory: {d}", file=sys.stderr)
         return 2
     for f in sorted(os.listdir(d)):
