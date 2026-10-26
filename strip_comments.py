@@ -962,6 +962,20 @@ def _looks_like_make(path):
     return base.lower().startswith("makefile") or base.endswith(".mk")
 
 
+def _has_symlink_component(path):
+    """Return whether any existing path component is a symbolic link."""
+    absolute = os.path.abspath(path)
+    drive, tail = os.path.splitdrive(absolute)
+    current = drive + os.sep
+    for component in tail.split(os.sep):
+        if not component:
+            continue
+        current = os.path.join(current, component)
+        if os.path.islink(current):
+            return True
+    return False
+
+
 def collect(paths, args):
     excl_dirs = set(DEFAULT_EXCLUDE_DIRS)
     for inc in args.include:
@@ -974,22 +988,24 @@ def collect(paths, args):
 
     found = []
     for root in paths:
-        if os.path.isfile(root) and not os.path.islink(root):
+        if _has_symlink_component(root):
+            continue
+        if os.path.isfile(root):
             found.append(root)
             continue
-        if os.path.islink(root) or not os.path.isdir(root):
+        if not os.path.isdir(root):
             continue
         for base, dirs, names in os.walk(root, followlinks=False):
             dirs[:] = sorted(
                 d for d in dirs
                 if d not in excl_dirs
-                and not os.path.islink(os.path.join(base, d))
+                and not _has_symlink_component(os.path.join(base, d))
                 and not excluded(os.path.join(base, d))
             )
             for nm in sorted(names):
                 full = os.path.join(base, nm)
                 if (
-                    not os.path.islink(full)
+                    not _has_symlink_component(full)
                     and os.path.isfile(full)
                     and not excluded(full)
                     and not _skip_name(nm)
