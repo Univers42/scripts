@@ -819,9 +819,9 @@ def convert(args: argparse.Namespace) -> None:
     md_text = fix_list_separation(md_text)
 
     if args.no_cache and CACHE_DIR.is_dir():
-        # Remove each cache entry, including symlinks, without following it.
+        # Remove cache entries without following symlinks or deleting directories.
         for cache_file in CACHE_DIR.iterdir():
-            if not cache_file.is_dir() or cache_file.is_symlink():
+            if cache_file.is_symlink() or cache_file.is_file():
                 cache_file.unlink()
         print("🗑  Cleared diagram cache")
 
