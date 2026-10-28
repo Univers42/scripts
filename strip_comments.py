@@ -600,13 +600,11 @@ def _match_sol_block(text, i, lang):
             return len(text) if le == -1 else le
     if lang.pod and text[i] == "=" and i + 1 < len(text) \
             and text[i + 1].isalpha():
-        p = i
-        while True:
-            nl = text.find("\n=cut", p)
-            if nl == -1:
-                return len(text)
-            line_end = text.find("\n", nl + 1)
-            return len(text) if line_end == -1 else line_end
+        nl = text.find("\n=cut", i)
+        if nl == -1:
+            return len(text)
+        line_end = text.find("\n", nl + 1)
+        return len(text) if line_end == -1 else line_end
     return None
 
 
@@ -939,6 +937,8 @@ def lang_for(path, ext_map, allow_makefiles):
     if ext in SKIP_EXT:
         return None
     if ext == "":
+        if _has_symlink_component(path) or not os.path.isfile(path):
+            return None
         try:
             with open(path, "rb") as fh:
                 first = fh.readline(256).decode("utf-8", "replace")
@@ -1015,6 +1015,8 @@ def collect(paths, args):
 
 
 def process(path, args):
+    if _has_symlink_component(path) or not os.path.isfile(path):
+        return "skip", None
     lang = lang_for(path, args.ext_map, args.makefiles)
     if lang is None:
         return "skip", None

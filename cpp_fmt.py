@@ -165,6 +165,8 @@ def fix_eof(content):
 
 def format_file(filepath, dry_run=False):
     """Apply all safe fixes to a file. Returns True if changed."""
+    if os.path.islink(filepath) or not os.path.isfile(filepath):
+        return False
     with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
     original = content
