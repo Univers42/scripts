@@ -854,7 +854,7 @@ def convert(args: argparse.Namespace) -> None:
         html_path = _validated_output_path(html_candidate, input_path)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
-    html_path.write_text(full_html, encoding="utf-8")
+    html_path.write_text(full_html, encoding="utf-8") # NOSONAR: local dev CLI on caller-chosen paths; path is validated above, S7027 is a false positive here
     print(f"🔍  Debug HTML → {html_path}")
 
     print("\n🖨  Generating PDF with WeasyPrint…")

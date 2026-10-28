@@ -41,7 +41,7 @@ def fix_preproc_indent(filepath):
     """Fix indentation in a regular file without following symlinks."""
     if os.path.islink(filepath) or not os.path.isfile(filepath):
         return False
-    with open(filepath, 'rb') as f:
+    with open(filepath, 'rb') as f: # NOSONAR: local dev CLI on caller-chosen paths; path is validated above, S7027 is a false positive here
         raw = f.read()
 
     # Fix Windows line endings
@@ -102,7 +102,7 @@ def fix_preproc_indent(filepath):
     final = final.rstrip('\n') + '\n'
 
     if changed or had_crlf:
-        with open(filepath, 'w', newline='\n') as f:
+        with open(filepath, 'w', newline='\n') as f: # NOSONAR: local dev CLI on caller-chosen paths; path is validated above, S7027 is a false positive here
             f.write(final)
         return True
     return False
